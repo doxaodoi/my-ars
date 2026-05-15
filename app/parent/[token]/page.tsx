@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { db } from "@/lib/db";
 import { Download } from "lucide-react";
 
@@ -149,10 +150,15 @@ export default async function ParentReportPage({
     <div className="min-h-screen bg-muted/20">
       {/* Header */}
       <header className="bg-primary text-white py-6 px-6 text-center">
+        <div className="flex justify-center mb-3">
+          <div className="w-20 h-20 rounded-full bg-white flex items-center justify-center overflow-hidden">
+            <Image src="/logo.png" alt="Abundant Rain School" width={80} height={80} className="object-contain w-full h-full" />
+          </div>
+        </div>
         <h1 className="text-xl font-extrabold tracking-wide">ABUNDANT RAIN SCHOOL</h1>
         <p className="text-primary-foreground/70 text-sm mt-1">Abease, Amasaman, Accra · Ghana</p>
         <p className="text-sm font-semibold mt-1" style={{ color: "#f0c040" }}>
-          ✦ Let God Arise!
+          ✦ Let God Arise! · Psalm 68:1
         </p>
       </header>
 

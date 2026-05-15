@@ -1,4 +1,4 @@
-import { Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer";
+import { Document, Page, View, Text, Image, StyleSheet } from "@react-pdf/renderer";
 
 // ─── Data types ───────────────────────────────────────────────────────────────
 
@@ -35,6 +35,7 @@ export type ReportCardData = {
   headRemark?: string | null;
   grades?: SubjectGrade[];
   nurserySections?: NurserySection[];
+  logoUrl?: string;
 };
 
 // ─── Colors ───────────────────────────────────────────────────────────────────
@@ -70,6 +71,7 @@ const s = StyleSheet.create({
 
   // Header
   header:         { backgroundColor: VIOLET, paddingHorizontal: 24, paddingVertical: 14, alignItems: "center" },
+  headerLogo:     { width: 52, height: 52, borderRadius: 26, marginBottom: 6, backgroundColor: "white" },
   headerTitle:    { color: "white", fontSize: 15, fontFamily: "Helvetica-Bold", letterSpacing: 0.5 },
   headerAddr:     { color: "#ddd6fe", fontSize: 8, marginTop: 2 },
   headerMotto:    { color: GOLD, fontSize: 8.5, fontFamily: "Helvetica-Bold", marginTop: 3 },
@@ -131,9 +133,12 @@ export function ReportCard({ data }: { data: ReportCardData }) {
       <Page size="A4" style={s.page}>
         {/* ── School header ───────────────────────────────────────────── */}
         <View style={s.header}>
+          {data.logoUrl && (
+            <Image src={data.logoUrl} style={s.headerLogo} />
+          )}
           <Text style={s.headerTitle}>ABUNDANT RAIN SCHOOL</Text>
           <Text style={s.headerAddr}>Abease, Amasaman, Accra  |  Ghana</Text>
-          <Text style={s.headerMotto}>Let God Arise!</Text>
+          <Text style={s.headerMotto}>Let God Arise!  ·  Psalm 68:1</Text>
         </View>
 
         {/* ── Report title banner ─────────────────────────────────────── */}

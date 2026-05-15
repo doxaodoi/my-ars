@@ -18,8 +18,10 @@ export async function sendReportEmail({
   reportUrl: string;
   term: string;
 }) {
+  const from = process.env.RESEND_FROM ?? "Abundant Rain School <onboarding@resend.dev>";
+
   return getResend().emails.send({
-    from: "Abundant Rain School <reports@abundantrain.edu.gh>",
+    from,
     to,
     subject: `${studentName}'s Terminal Report — ${term}`,
     html: `

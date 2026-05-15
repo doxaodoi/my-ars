@@ -106,6 +106,8 @@ export async function GET(
   }
 
   // ── Build PDF data ────────────────────────────────────────────────────────
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+
   const data: ReportCardData = {
     studentName: report.student.name,
     className: cls.name,
@@ -116,6 +118,7 @@ export async function GET(
     headRemark: report.headRemark,
     grades: !isNursery ? grades : undefined,
     nurserySections: isNursery ? nurserySections : undefined,
+    logoUrl: appUrl ? `${appUrl}/logo.png` : undefined,
   };
 
   // ── Render PDF ────────────────────────────────────────────────────────────

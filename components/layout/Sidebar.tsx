@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useState, useEffect } from "react";
@@ -108,9 +109,9 @@ export function Sidebar({ role, userName }: SidebarProps) {
         {/* Violet gradient header */}
         <div className="bg-primary px-5 py-4">
           <div className="flex items-center gap-3">
-            {/* Logo circle */}
-            <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center shrink-0 ring-2 ring-white/30">
-              <span className="text-base font-extrabold text-white tracking-tight">AR</span>
+            {/* Logo */}
+            <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 ring-2 ring-white/30 bg-white flex items-center justify-center">
+              <Image src="/logo.png" alt="Abundant Rain School" width={40} height={40} className="object-contain w-full h-full" />
             </div>
             <div className="min-w-0">
               <p className="font-bold text-sm text-white leading-tight truncate">
