@@ -28,5 +28,5 @@ export default auth(function middleware(req: NextRequest & { auth: { user?: { ro
 });
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!api|_next/static|_next/image|favicon\\.ico|.*\\.(?:png|jpg|jpeg|svg|gif|webp|ico)$).*)"],
 };
