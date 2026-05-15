@@ -4,7 +4,6 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,7 +43,7 @@ export default function LoginPage() {
         {/* School branding */}
         <div className="text-center space-y-2">
           <div className="mx-auto w-24 h-24 flex items-center justify-center">
-            <Image src="/logo.png" alt="Abundant Rain School" width={96} height={96} className="object-contain" priority />
+            <img src="/logo.png" alt="Abundant Rain School" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-2xl font-bold text-foreground">Abundant Rain School</h1>
           <p className="text-sm text-muted-foreground italic">Let God Arise! · Psalm 68:1</p>

@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useState, useEffect } from "react";
@@ -111,7 +110,7 @@ export function Sidebar({ role, userName }: SidebarProps) {
           <div className="flex items-center gap-3">
             {/* Logo */}
             <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 ring-2 ring-white/30 bg-white flex items-center justify-center">
-              <Image src="/logo.png" alt="Abundant Rain School" width={40} height={40} className="object-contain w-full h-full" />
+              <img src="/logo.png" alt="Abundant Rain School" className="w-full h-full object-contain" />
             </div>
             <div className="min-w-0">
               <p className="font-bold text-sm text-white leading-tight truncate">
