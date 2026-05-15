@@ -1,0 +1,221 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum Role {
+  OWNER
+  ADMIN
+  ACADEMIC_HEAD
+  TEACHER
+  PARENT
+}
+
+enum ClassType {
+  CRECHE
+  NURSERY
+  KG
+  PRIMARY
+}
+
+enum ReportStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  PUBLISHED
+}
+
+// ─── Core Models ──────────────────────────────────────────────────────────────
+
+model User {
+  id             String         @id @default(cuid())
+  name           String
+  email          String         @unique
+  password       String
+  role           Role
+  classTeachers  ClassTeacher[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model Class {
+  id               String            @id @default(cuid())
+  name             String            // e.g. "Basic 1", "KG2", "Nursery 1", "Creche"
+  type             ClassType
+  level            String?           // "1", "2", etc.
+  students         Student[]
+  subjects         Subject[]
+  teachers         ClassTeacher[]
+  nurseryTemplates NurseryTemplate[]
+  createdAt        DateTime          @default(now())
+}
+
+model ClassTeacher {
+  id             String  @id @default(cuid())
+  userId         String
+  classId        String
+  isClassTeacher Boolean @default(false)
+  user           User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  class          Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, classId])
+}
+
+model Student {
+  id                    String                    @id @default(cuid())
+  name                  String
+  admissionNo           String?                   @unique
+  dateOfBirth           DateTime?
+  classId               String
+  parentName            String?
+  parentEmail           String?
+  parentPhone           String?
+  photoUrl              String?
+  class                 Class                     @relation(fields: [classId], references: [id])
+  grades                Grade[]
+  nurseryAssessments    NurseryStudentAssessment[]
+  reports               Report[]
+  reportTokens          ReportToken[]
+  createdAt             DateTime                  @default(now())
+}
+
+model Subject {
+  id      String  @id @default(cuid())
+  name    String
+  classId String
+  order   Int     @default(0)
+  class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+  grades  Grade[]
+}
+
+model Term {
+  id        String   @id @default(cuid())
+  name      String   // "Term 1", "Term 2", "Term 3"
+  year      Int      // academic year e.g. 2025
+  isCurrent Boolean  @default(false)
+  grades    Grade[]
+  reports   Report[]
+  nurseryAssessments NurseryStudentAssessment[]
+  createdAt DateTime @default(now())
+}
+
+// ─── Grading ──────────────────────────────────────────────────────────────────
+
+model Grade {
+  id      String  @id @default(cuid())
+  studentId String
+  subjectId String
+  termId    String
+
+  // KG1 & KG2: midterm /30, exam /70 → total = midterm + exam
+  midterm   Float?
+  exam      Float?
+
+  // Basic 1–6: CA components + exam
+  test1       Float?  // /10
+  test2       Float?  // /10
+  midtermScore Float? // /10
+  assignment  Float?  // /10
+  project     Float?  // /20
+  basicExam   Float?  // /100
+
+  // Computed on save
+  total   Float?
+  grade   String?
+  remark  String?
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  term    Term    @relation(fields: [termId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([studentId, subjectId, termId])
+}
+
+// ─── Nursery / Creche ─────────────────────────────────────────────────────────
+
+model NurseryTemplate {
+  id       String           @id @default(cuid())
+  classId  String
+  name     String
+  fileUrl  String?
+  class    Class            @relation(fields: [classId], references: [id], onDelete: Cascade)
+  sections NurserySection[]
+  createdAt DateTime        @default(now())
+}
+
+model NurserySection {
+  id         String          @id @default(cuid())
+  templateId String
+  name       String
+  order      Int             @default(0)
+  template   NurseryTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  items      NurseryItem[]
+}
+
+model NurseryItem {
+  id          String                    @id @default(cuid())
+  sectionId   String
+  name        String
+  order       Int                       @default(0)
+  section     NurserySection            @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  assessments NurseryStudentAssessment[]
+}
+
+model NurseryStudentAssessment {
+  id        String  @id @default(cuid())
+  studentId String
+  itemId    String
+  termId    String
+  ticked    Boolean @default(false)
+  remark    String?
+
+  student Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  item    NurseryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  term    Term        @relation(fields: [termId], references: [id])
+
+  @@unique([studentId, itemId, termId])
+}
+
+// ─── Reports ─────────────────────────────────────────────────────────────────
+
+model Report {
+  id             String       @id @default(cuid())
+  studentId      String
+  termId         String
+  teacherRemark  String?
+  headRemark     String?
+  status         ReportStatus @default(DRAFT)
+  pdfUrl         String?
+  published      Boolean      @default(false)
+
+  student Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  term    Term          @relation(fields: [termId], references: [id])
+  tokens  ReportToken[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([studentId, termId])
+}
+
+model ReportToken {
+  id        String    @id @default(cuid())
+  reportId  String
+  studentId String
+  token     String    @unique @default(cuid())
+  expiresAt DateTime?
+
+  report  Report  @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
