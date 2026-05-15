@@ -125,7 +125,7 @@ export async function GET(
   const safeName = report.student.name.replace(/\s+/g, "_");
   const fileName = `Report_${safeName}_${report.term.name}_${report.term.year}.pdf`;
 
-  return new NextResponse(buffer, {
+  return new NextResponse(new Uint8Array(buffer), {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="${fileName}"`,
