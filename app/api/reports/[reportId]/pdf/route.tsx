@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { renderToBuffer } from "@react-pdf/renderer";
+import type { DocumentProps } from "@react-pdf/renderer";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ReportCard } from "@/components/reports/ReportCard";
@@ -118,7 +119,7 @@ export async function GET(
   };
 
   // ── Render PDF ────────────────────────────────────────────────────────────
-  const element = React.createElement(ReportCard, { data });
+  const element = React.createElement(ReportCard, { data }) as React.ReactElement<DocumentProps>;
   const buffer = await renderToBuffer(element);
 
   const safeName = report.student.name.replace(/\s+/g, "_");
