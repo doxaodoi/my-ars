@@ -55,7 +55,7 @@ export function TermDialog() {
           <div className="space-y-2">
             <Label>Term</Label>
             <Select value={termName} onValueChange={(v) => { if (v) setTermName(v); }}>
-              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-full"><SelectValue placeholder="Select term...">{termName}</SelectValue></SelectTrigger>
               <SelectContent>
                 {TERM_NAMES.map((t) => (
                   <SelectItem key={t} value={t}>{t}</SelectItem>
@@ -81,6 +81,16 @@ export function TermDialog() {
               </span>
             </div>
             <input type="hidden" name="year" value={formattedYear} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Term Ends</Label>
+              <Input type="date" name="termEnds" />
+            </div>
+            <div className="space-y-2">
+              <Label>Next Term Begins</Label>
+              <Input type="date" name="nextTermBegins" />
+            </div>
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
             {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}

@@ -96,35 +96,31 @@ model Subject {
 }
 
 model Term {
-  id        String   @id @default(cuid())
-  name      String   // "Term 1", "Term 2", "Term 3"
-  year      String   // academic year e.g. "2025/2026"
-  isCurrent Boolean  @default(false)
-  grades    Grade[]
-  reports   Report[]
+  id             String    @id @default(cuid())
+  name           String    // "Term 1", "Term 2", "Term 3"
+  year           String    // academic year e.g. "2025/2026"
+  isCurrent      Boolean   @default(false)
+  termEnds       DateTime?
+  nextTermBegins DateTime?
+  grades         Grade[]
+  reports        Report[]
   nurseryAssessments NurseryStudentAssessment[]
-  createdAt DateTime @default(now())
+  createdAt      DateTime  @default(now())
 }
 
 // ─── Grading ──────────────────────────────────────────────────────────────────
 
 model Grade {
-  id      String  @id @default(cuid())
+  id        String  @id @default(cuid())
   studentId String
   subjectId String
   termId    String
 
-  // KG1 & KG2: midterm /30, exam /70 → total = midterm + exam
-  midterm   Float?
-  exam      Float?
-
-  // Basic 1–6: CA components + exam
-  test1       Float?  // /10
-  test2       Float?  // /10
-  midtermScore Float? // /10
-  assignment  Float?  // /10
-  project     Float?  // /20
-  basicExam   Float?  // /100
+  // Universal scoring: Class Score + Exam Score
+  // KG: classScore out of 30, examScore out of 70 → total = classScore + examScore
+  // Basic: classScore out of 100, examScore out of 100 → total = (classScore*50 + examScore*50) / 100
+  classScore  Float?
+  examScore   Float?
 
   // Computed on save
   total   Float?
@@ -176,7 +172,7 @@ model NurseryStudentAssessment {
   studentId String
   itemId    String
   termId    String
-  ticked    Boolean @default(false)
+  grade     String? // "A","B","C","D","E","F" or null (not yet graded)
   remark    String?
 
   student Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
@@ -197,6 +193,14 @@ model Report {
   status         ReportStatus @default(DRAFT)
   pdfUrl         String?
   published      Boolean      @default(false)
+
+  // Additional report fields from school templates
+  interest       String?      // Student's interests
+  conduct        String?      // Conduct assessment
+  attitude       String?      // Attitude to work
+  attendance     Int?         // Days present
+  totalDays      Int?         // Total school days in term
+  promoted       String?      // "Promoted to Basic 3" or "Graduated"
 
   student Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
   term    Term          @relation(fields: [termId], references: [id])

@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { db } from "@/lib/db";
 import { Download } from "lucide-react";
 
@@ -81,11 +80,10 @@ export default async function ParentReportPage({
   // ── Grades (KG / Basic) ──────────────────────────────────────────────────
   let grades: {
     subjectName: string;
-    midterm?: number | null; exam?: number | null;
-    test1?: number | null; test2?: number | null;
-    midtermScore?: number | null; assignment?: number | null;
-    project?: number | null; basicExam?: number | null;
-    total?: number | null; grade?: string | null;
+    classScore?: number | null;
+    examScore?: number | null;
+    total?: number | null;
+    grade?: string | null;
   }[] = [];
 
   if (!isNursery) {
@@ -98,18 +96,17 @@ export default async function ParentReportPage({
       .sort((a, b) => (orderMap.get(a.subjectId) ?? 99) - (orderMap.get(b.subjectId) ?? 99))
       .map((g) => ({
         subjectName: g.subject.name,
-        midterm: g.midterm, exam: g.exam,
-        test1: g.test1, test2: g.test2,
-        midtermScore: g.midtermScore, assignment: g.assignment,
-        project: g.project, basicExam: g.basicExam,
-        total: g.total, grade: g.grade,
+        classScore: g.classScore,
+        examScore: g.examScore,
+        total: g.total,
+        grade: g.grade,
       }));
   }
 
   // ── Nursery / Creche assessments ─────────────────────────────────────────
   let nurserySections: {
     name: string;
-    items: { name: string; ticked: boolean; remark?: string | null }[];
+    items: { name: string; grade: string | null; remark?: string | null }[];
   }[] = [];
 
   if (isNursery) {
@@ -137,7 +134,7 @@ export default async function ParentReportPage({
         name: sec.name,
         items: sec.items.map((item) => {
           const a = item.assessments[0];
-          return { name: item.name, ticked: a?.ticked ?? false, remark: a?.remark };
+          return { name: item.name, grade: a?.grade ?? null, remark: a?.remark };
         }),
       }));
     }
@@ -157,7 +154,7 @@ export default async function ParentReportPage({
         <h1 className="text-xl font-extrabold tracking-wide">ABUNDANT RAIN SCHOOL</h1>
         <p className="text-primary-foreground/70 text-sm mt-1">Abease, Amasaman, Accra · Ghana</p>
         <p className="text-sm font-semibold mt-1" style={{ color: "#f0c040" }}>
-          ✦ Let God Arise! · Psalm 68:1
+          Let God Arise! · Psalm 68:1
         </p>
       </header>
 
@@ -168,7 +165,7 @@ export default async function ParentReportPage({
 
       {/* Body */}
       <main className="max-w-2xl mx-auto px-4 py-8 space-y-6">
-        {/* Student info */}
+        {/* Student info — Row 1 */}
         <div className="bg-background border rounded-lg grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0">
           <div className="p-4 col-span-2 sm:col-span-2">
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Student Name</p>
@@ -184,6 +181,30 @@ export default async function ParentReportPage({
           </div>
         </div>
 
+        {/* Student info — Row 2: Attendance, Conduct, Interest, Attitude */}
+        <div className="bg-background border rounded-lg grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0">
+          <div className="p-4">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Attendance</p>
+            <p className="font-semibold text-foreground">
+              {report.attendance != null && report.totalDays != null
+                ? `${report.attendance} / ${report.totalDays} days`
+                : "—"}
+            </p>
+          </div>
+          <div className="p-4">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Conduct</p>
+            <p className="font-semibold text-foreground">{report.conduct || "—"}</p>
+          </div>
+          <div className="p-4">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Interest</p>
+            <p className="font-semibold text-foreground">{report.interest || "—"}</p>
+          </div>
+          <div className="p-4">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Attitude</p>
+            <p className="font-semibold text-foreground">{report.attitude || "—"}</p>
+          </div>
+        </div>
+
         {/* ── Academic Performance (KG / Basic) ──────────────────────── */}
         {!isNursery && grades.length > 0 && (
           <div className="space-y-2">
@@ -195,21 +216,12 @@ export default async function ParentReportPage({
                 <thead>
                   <tr className="border-b bg-primary/5">
                     <th className="text-left px-3 py-2 font-semibold text-foreground/70">Subject</th>
-                    {isKG ? (
-                      <>
-                        <th className="px-2 py-2 text-center font-semibold text-foreground/70 whitespace-pre-line leading-tight">{"Midterm\n/30"}</th>
-                        <th className="px-2 py-2 text-center font-semibold text-foreground/70 whitespace-pre-line leading-tight">{"Exam\n/70"}</th>
-                      </>
-                    ) : (
-                      <>
-                        <th className="px-2 py-2 text-center font-semibold text-foreground/70 whitespace-pre-line leading-tight text-xs">{"T1\n/10"}</th>
-                        <th className="px-2 py-2 text-center font-semibold text-foreground/70 whitespace-pre-line leading-tight text-xs">{"T2\n/10"}</th>
-                        <th className="px-2 py-2 text-center font-semibold text-foreground/70 whitespace-pre-line leading-tight text-xs">{"Mid\n/10"}</th>
-                        <th className="px-2 py-2 text-center font-semibold text-foreground/70 whitespace-pre-line leading-tight text-xs">{"Asgn\n/10"}</th>
-                        <th className="px-2 py-2 text-center font-semibold text-foreground/70 whitespace-pre-line leading-tight text-xs">{"Proj\n/20"}</th>
-                        <th className="px-2 py-2 text-center font-semibold text-foreground/70 whitespace-pre-line leading-tight text-xs">{"Exam\n/100"}</th>
-                      </>
-                    )}
+                    <th className="px-2 py-2 text-center font-semibold text-foreground/70 whitespace-pre-line leading-tight">
+                      {isKG ? "Class\n/30" : "Class\n/100"}
+                    </th>
+                    <th className="px-2 py-2 text-center font-semibold text-foreground/70 whitespace-pre-line leading-tight">
+                      {isKG ? "Exam\n/70" : "Exam\n/100"}
+                    </th>
                     <th className="px-2 py-2 text-center font-semibold text-foreground/70">Total</th>
                     <th className="px-2 py-2 text-center font-semibold text-foreground/70">Grade</th>
                   </tr>
@@ -218,21 +230,8 @@ export default async function ParentReportPage({
                   {grades.map((g, i) => (
                     <tr key={i} className={i % 2 === 0 ? "" : "bg-muted/30"}>
                       <td className="px-3 py-2 font-medium">{g.subjectName}</td>
-                      {isKG ? (
-                        <>
-                          <td className="px-2 py-2 text-center">{g.midterm?.toFixed(1) ?? "—"}</td>
-                          <td className="px-2 py-2 text-center">{g.exam?.toFixed(1) ?? "—"}</td>
-                        </>
-                      ) : (
-                        <>
-                          <td className="px-2 py-2 text-center">{g.test1?.toFixed(1) ?? "—"}</td>
-                          <td className="px-2 py-2 text-center">{g.test2?.toFixed(1) ?? "—"}</td>
-                          <td className="px-2 py-2 text-center">{g.midtermScore?.toFixed(1) ?? "—"}</td>
-                          <td className="px-2 py-2 text-center">{g.assignment?.toFixed(1) ?? "—"}</td>
-                          <td className="px-2 py-2 text-center">{g.project?.toFixed(1) ?? "—"}</td>
-                          <td className="px-2 py-2 text-center">{g.basicExam?.toFixed(1) ?? "—"}</td>
-                        </>
-                      )}
+                      <td className="px-2 py-2 text-center">{g.classScore?.toFixed(1) ?? "—"}</td>
+                      <td className="px-2 py-2 text-center">{g.examScore?.toFixed(1) ?? "—"}</td>
                       <td className="px-2 py-2 text-center font-bold">{g.total?.toFixed(1) ?? "—"}</td>
                       <td className="px-2 py-2 text-center">
                         {g.grade ? (
@@ -246,6 +245,9 @@ export default async function ParentReportPage({
                 </tbody>
               </table>
             </div>
+            <p className="text-xs text-muted-foreground">
+              {isKG ? "Scoring: Class Score (30%) + Exam (70%)" : "Scoring: Class Score (50%) + Exam (50%)"}
+            </p>
           </div>
         )}
 
@@ -261,10 +263,14 @@ export default async function ParentReportPage({
                 <div className="divide-y">
                   {sec.items.map((item, ii) => (
                     <div key={ii} className={`flex items-center gap-3 px-4 py-2.5 ${ii % 2 === 1 ? "bg-muted/20" : ""}`}>
-                      <span className={`text-sm font-bold w-4 ${item.ticked ? "text-emerald-600" : "text-muted-foreground/30"}`}>
-                        {item.ticked ? "✓" : "○"}
-                      </span>
                       <span className="text-sm flex-1">{item.name}</span>
+                      {item.grade ? (
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold ${GRADE_COLORS[item.grade] ?? "bg-muted text-muted-foreground"}`}>
+                          {item.grade}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
                       {item.remark && (
                         <span className="text-xs text-muted-foreground italic">{item.remark}</span>
                       )}
@@ -273,6 +279,34 @@ export default async function ParentReportPage({
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* ── Promoted / Term dates ──────────────────────────────────── */}
+        {(report.promoted || report.term.termEnds || report.term.nextTermBegins) && (
+          <div className="bg-background border rounded-lg grid grid-cols-1 sm:grid-cols-3 divide-x divide-y sm:divide-y-0">
+            {report.promoted && (
+              <div className="p-4">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Promoted To</p>
+                <p className="font-semibold text-foreground">{report.promoted}</p>
+              </div>
+            )}
+            {report.term.termEnds && (
+              <div className="p-4">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Term Ends</p>
+                <p className="font-semibold text-foreground">
+                  {new Date(report.term.termEnds).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                </p>
+              </div>
+            )}
+            {report.term.nextTermBegins && (
+              <div className="p-4">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Next Term Begins</p>
+                <p className="font-semibold text-foreground">
+                  {new Date(report.term.nextTermBegins).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                </p>
+              </div>
+            )}
           </div>
         )}
 

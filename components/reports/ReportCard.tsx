@@ -4,17 +4,8 @@ import { Document, Page, View, Text, Image, StyleSheet } from "@react-pdf/render
 
 export type SubjectGrade = {
   name: string;
-  // KG
-  midterm?: number | null;
-  exam?: number | null;
-  // Basic (Primary)
-  test1?: number | null;
-  test2?: number | null;
-  midtermScore?: number | null;
-  assignment?: number | null;
-  project?: number | null;
-  basicExam?: number | null;
-  // Common
+  classScore?: number | null;
+  examScore?: number | null;
   total?: number | null;
   grade?: string | null;
   remark?: string | null;
@@ -22,7 +13,7 @@ export type SubjectGrade = {
 
 export type NurserySection = {
   name: string;
-  items: { name: string; ticked: boolean; remark?: string | null }[];
+  items: { name: string; grade: string | null; remark?: string | null }[];
 };
 
 export type ReportCardData = {
@@ -36,6 +27,15 @@ export type ReportCardData = {
   grades?: SubjectGrade[];
   nurserySections?: NurserySection[];
   logoUrl?: string;
+  // New fields
+  interest?: string | null;
+  conduct?: string | null;
+  attitude?: string | null;
+  attendance?: number | null;
+  totalDays?: number | null;
+  promoted?: string | null;
+  termEnds?: string | null;
+  nextTermBegins?: string | null;
 };
 
 // ─── Colors ───────────────────────────────────────────────────────────────────
@@ -82,16 +82,16 @@ const s = StyleSheet.create({
   body:           { paddingHorizontal: 22, paddingVertical: 16 },
 
   // Student info strip
-  infoRow:        { flexDirection: "row", borderWidth: 1, borderColor: BORDER, borderRadius: 4, marginBottom: 14, overflow: "hidden" },
-  infoCell:       { flex: 1, padding: 8, borderRightWidth: 1, borderColor: BORDER },
+  infoRow:        { flexDirection: "row", borderWidth: 1, borderColor: BORDER, borderRadius: 4, marginBottom: 10, overflow: "hidden" },
+  infoCell:       { flex: 1, padding: 6, borderRightWidth: 1, borderColor: BORDER },
   infoLabel:      { fontSize: 7, color: "#6b7280", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 2 },
-  infoValue:      { fontSize: 9.5, fontFamily: "Helvetica-Bold", color: "#111827" },
+  infoValue:      { fontSize: 9, fontFamily: "Helvetica-Bold", color: "#111827" },
 
   // Section heading
-  sectionLabel:   { fontSize: 8, fontFamily: "Helvetica-Bold", color: VIOLET, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 5 },
+  sectionLabel:   { fontSize: 8, fontFamily: "Helvetica-Bold", color: VIOLET, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 5, marginTop: 8 },
 
   // Grade table
-  tblWrap:        { borderWidth: 1, borderColor: BORDER, borderRadius: 4, overflow: "hidden", marginBottom: 12 },
+  tblWrap:        { borderWidth: 1, borderColor: BORDER, borderRadius: 4, overflow: "hidden", marginBottom: 10 },
   tblHead:        { flexDirection: "row", backgroundColor: VIOLET, paddingVertical: 5, paddingHorizontal: 4 },
   tblHCell:       { color: "white", fontSize: 7.5, fontFamily: "Helvetica-Bold", textAlign: "center" },
   tblRow:         { flexDirection: "row", paddingVertical: 4, paddingHorizontal: 4, borderBottomWidth: 1, borderColor: "#f3f4f6" },
@@ -104,19 +104,19 @@ const s = StyleSheet.create({
   secHead:        { backgroundColor: LIGHT_VIOLET, paddingVertical: 4, paddingHorizontal: 8, borderRadius: 3, marginBottom: 3 },
   secHeadText:    { fontSize: 8.5, fontFamily: "Helvetica-Bold", color: VIOLET },
   itemRow:        { flexDirection: "row", alignItems: "center", paddingVertical: 3.5, paddingHorizontal: 8, borderBottomWidth: 1, borderColor: "#f3f4f6" },
-  tickMark:       { width: 14, fontSize: 8, fontFamily: "Helvetica-Bold", marginRight: 5 },
   itemName:       { flex: 1, fontSize: 8.5, color: "#374151" },
-  itemRemark:     { fontSize: 7.5, color: "#9ca3af" },
+  itemGrade:      { width: 28, fontSize: 8, fontFamily: "Helvetica-Bold", textAlign: "center" },
+  itemRemark:     { fontSize: 7.5, color: "#9ca3af", maxWidth: 100 },
 
   // Remarks box
   remarkBox:      { borderWidth: 1, borderColor: BORDER, borderRadius: 4, overflow: "hidden", marginBottom: 8 },
   remarkHdr:      { backgroundColor: LIGHT_VIOLET, paddingVertical: 4, paddingHorizontal: 10 },
   remarkHdrText:  { fontSize: 8, fontFamily: "Helvetica-Bold", color: VIOLET },
-  remarkBody:     { padding: 10, minHeight: 32 },
+  remarkBody:     { padding: 10, minHeight: 28 },
   remarkText:     { fontSize: 9, color: "#374151", lineHeight: 1.5 },
 
   // Signatures
-  sigRow:         { flexDirection: "row", marginTop: 18, paddingTop: 12, borderTopWidth: 1, borderColor: BORDER },
+  sigRow:         { flexDirection: "row", marginTop: 14, paddingTop: 10, borderTopWidth: 1, borderColor: BORDER },
   sigBox:         { flex: 1, alignItems: "center" },
   sigLine:        { borderTopWidth: 1, borderColor: "#9ca3af", width: "65%", marginBottom: 4 },
   sigLabel:       { fontSize: 7.5, color: "#6b7280" },
@@ -151,7 +151,7 @@ export function ReportCard({ data }: { data: ReportCardData }) {
         {/* ── Body ────────────────────────────────────────────────────── */}
         <View style={s.body}>
 
-          {/* Student info strip */}
+          {/* Student info strip — Row 1 */}
           <View style={s.infoRow}>
             <View style={[s.infoCell, { flex: 2 }]}>
               <Text style={s.infoLabel}>Student Name</Text>
@@ -171,6 +171,30 @@ export function ReportCard({ data }: { data: ReportCardData }) {
             </View>
           </View>
 
+          {/* Student info strip — Row 2: Attendance, Conduct, Interest, Promoted */}
+          <View style={s.infoRow}>
+            <View style={s.infoCell}>
+              <Text style={s.infoLabel}>Attendance</Text>
+              <Text style={s.infoValue}>
+                {data.attendance != null && data.totalDays != null
+                  ? `${data.attendance} / ${data.totalDays} days`
+                  : "-"}
+              </Text>
+            </View>
+            <View style={s.infoCell}>
+              <Text style={s.infoLabel}>Conduct</Text>
+              <Text style={s.infoValue}>{data.conduct || "-"}</Text>
+            </View>
+            <View style={s.infoCell}>
+              <Text style={s.infoLabel}>Interest</Text>
+              <Text style={s.infoValue}>{data.interest || "-"}</Text>
+            </View>
+            <View style={[s.infoCell, { borderRightWidth: 0 }]}>
+              <Text style={s.infoLabel}>Attitude</Text>
+              <Text style={s.infoValue}>{data.attitude || "-"}</Text>
+            </View>
+          </View>
+
           {/* ── Academic grades (KG / Basic) ────────────────────────── */}
           {!isNursery && data.grades && data.grades.length > 0 && (
             <View>
@@ -179,23 +203,15 @@ export function ReportCard({ data }: { data: ReportCardData }) {
                 {/* header row */}
                 <View style={s.tblHead}>
                   <Text style={[s.tblHCell, { flex: 3, textAlign: "left" }]}>Subject</Text>
-                  {isKG ? (
-                    <>
-                      <Text style={[s.tblHCell, { flex: 1 }]}>{"Midterm\n/30"}</Text>
-                      <Text style={[s.tblHCell, { flex: 1 }]}>{"Exam\n/70"}</Text>
-                    </>
-                  ) : (
-                    <>
-                      <Text style={[s.tblHCell, { flex: 0.75 }]}>{"T1\n/10"}</Text>
-                      <Text style={[s.tblHCell, { flex: 0.75 }]}>{"T2\n/10"}</Text>
-                      <Text style={[s.tblHCell, { flex: 0.75 }]}>{"Mid\n/10"}</Text>
-                      <Text style={[s.tblHCell, { flex: 0.75 }]}>{"Asgn\n/10"}</Text>
-                      <Text style={[s.tblHCell, { flex: 0.75 }]}>{"Proj\n/20"}</Text>
-                      <Text style={[s.tblHCell, { flex: 1 }]}>{"Exam\n/100"}</Text>
-                    </>
-                  )}
+                  <Text style={[s.tblHCell, { flex: 1.2 }]}>
+                    {isKG ? "Class Score\n/30" : "Class Score\n/100"}
+                  </Text>
+                  <Text style={[s.tblHCell, { flex: 1.2 }]}>
+                    {isKG ? "Exam\n/70" : "Exam\n/100"}
+                  </Text>
                   <Text style={[s.tblHCell, { flex: 1 }]}>Total</Text>
                   <Text style={[s.tblHCell, { flex: 0.85 }]}>Grade</Text>
+                  <Text style={[s.tblHCell, { flex: 1.5 }]}>Remark</Text>
                 </View>
 
                 {/* data rows */}
@@ -204,21 +220,8 @@ export function ReportCard({ data }: { data: ReportCardData }) {
                   return (
                     <View key={i} style={[s.tblRow, i % 2 === 1 ? s.tblRowAlt : {}]}>
                       <Text style={[s.tblCell, s.tblCellLeft, { flex: 3 }]}>{g.name}</Text>
-                      {isKG ? (
-                        <>
-                          <Text style={[s.tblCell, { flex: 1 }]}>{fmt(g.midterm)}</Text>
-                          <Text style={[s.tblCell, { flex: 1 }]}>{fmt(g.exam)}</Text>
-                        </>
-                      ) : (
-                        <>
-                          <Text style={[s.tblCell, { flex: 0.75 }]}>{fmt(g.test1)}</Text>
-                          <Text style={[s.tblCell, { flex: 0.75 }]}>{fmt(g.test2)}</Text>
-                          <Text style={[s.tblCell, { flex: 0.75 }]}>{fmt(g.midtermScore)}</Text>
-                          <Text style={[s.tblCell, { flex: 0.75 }]}>{fmt(g.assignment)}</Text>
-                          <Text style={[s.tblCell, { flex: 0.75 }]}>{fmt(g.project)}</Text>
-                          <Text style={[s.tblCell, { flex: 1 }]}>{fmt(g.basicExam)}</Text>
-                        </>
-                      )}
+                      <Text style={[s.tblCell, { flex: 1.2 }]}>{fmt(g.classScore)}</Text>
+                      <Text style={[s.tblCell, { flex: 1.2 }]}>{fmt(g.examScore)}</Text>
                       <Text style={[s.tblCell, s.tblCellBold, { flex: 1 }]}>{fmt(g.total)}</Text>
                       <View style={[{ flex: 0.85, alignItems: "center", justifyContent: "center" }]}>
                         {g.grade ? (
@@ -229,14 +232,23 @@ export function ReportCard({ data }: { data: ReportCardData }) {
                           <Text style={s.tblCell}>-</Text>
                         )}
                       </View>
+                      <Text style={[s.tblCell, { flex: 1.5, fontSize: 7.5 }]}>{g.remark || ""}</Text>
                     </View>
                   );
                 })}
               </View>
+
+              {/* Scoring legend */}
+              <Text style={{ fontSize: 7, color: "#6b7280", marginBottom: 8 }}>
+                {isKG
+                  ? "Scoring: Class Score (30%) + Exam (70%) = Total out of 100"
+                  : "Scoring: Class Score (50%) + Exam (50%) = Total out of 100"}
+                {"  |  A+(90-100) A(80-89) B(70-79) C(60-69) D(50-59) E(40-49) F(0-39)"}
+              </Text>
             </View>
           )}
 
-          {/* ── Nursery / Creche tick assessments ───────────────────── */}
+          {/* ── Nursery / Creche letter grade assessments ──────────── */}
           {isNursery && data.nurserySections && data.nurserySections.length > 0 && (
             <View>
               <Text style={s.sectionLabel}>Assessment</Text>
@@ -246,27 +258,60 @@ export function ReportCard({ data }: { data: ReportCardData }) {
                     <Text style={s.secHeadText}>{sec.name}</Text>
                   </View>
                   <View style={{ borderWidth: 1, borderColor: BORDER, borderRadius: 3, overflow: "hidden" }}>
-                    {sec.items.map((item, ii) => (
-                      <View
-                        key={ii}
-                        style={[
-                          s.itemRow,
-                          ii === sec.items.length - 1 ? { borderBottomWidth: 0 } : {},
-                          ii % 2 === 1 ? { backgroundColor: "#fafafa" } : {},
-                        ]}
-                      >
-                        <Text style={[s.tickMark, { color: item.ticked ? "#059669" : "#9ca3af" }]}>
-                          {item.ticked ? "[Y]" : "[ ]"}
-                        </Text>
-                        <Text style={s.itemName}>{item.name}</Text>
-                        {item.remark ? (
-                          <Text style={s.itemRemark}>{item.remark}</Text>
-                        ) : null}
-                      </View>
-                    ))}
+                    {sec.items.map((item, ii) => {
+                      const gc = gradeColor(item.grade);
+                      return (
+                        <View
+                          key={ii}
+                          style={[
+                            s.itemRow,
+                            ii === sec.items.length - 1 ? { borderBottomWidth: 0 } : {},
+                            ii % 2 === 1 ? { backgroundColor: "#fafafa" } : {},
+                          ]}
+                        >
+                          <Text style={s.itemName}>{item.name}</Text>
+                          <View style={[s.itemGrade, { alignItems: "center" }]}>
+                            {item.grade ? (
+                              <View style={{ backgroundColor: gc.bg, paddingHorizontal: 4, paddingVertical: 1, borderRadius: 2 }}>
+                                <Text style={{ fontSize: 7.5, fontFamily: "Helvetica-Bold", color: gc.text }}>{item.grade}</Text>
+                              </View>
+                            ) : (
+                              <Text style={{ fontSize: 8, color: "#9ca3af" }}>-</Text>
+                            )}
+                          </View>
+                          {item.remark ? (
+                            <Text style={s.itemRemark}>{item.remark}</Text>
+                          ) : null}
+                        </View>
+                      );
+                    })}
                   </View>
                 </View>
               ))}
+            </View>
+          )}
+
+          {/* ── Promoted / Term dates ──────────────────────────────── */}
+          {(data.promoted || data.termEnds || data.nextTermBegins) && (
+            <View style={[s.infoRow, { marginTop: 6 }]}>
+              {data.promoted && (
+                <View style={s.infoCell}>
+                  <Text style={s.infoLabel}>Promoted To</Text>
+                  <Text style={s.infoValue}>{data.promoted}</Text>
+                </View>
+              )}
+              {data.termEnds && (
+                <View style={s.infoCell}>
+                  <Text style={s.infoLabel}>Term Ends</Text>
+                  <Text style={s.infoValue}>{data.termEnds}</Text>
+                </View>
+              )}
+              {data.nextTermBegins && (
+                <View style={[s.infoCell, { borderRightWidth: 0 }]}>
+                  <Text style={s.infoLabel}>Next Term Begins</Text>
+                  <Text style={s.infoValue}>{data.nextTermBegins}</Text>
+                </View>
+              )}
             </View>
           )}
 

@@ -36,8 +36,19 @@ interface TickFormProps {
   classId: string;
 }
 
-type TickState = { ticked: boolean; remark: string };
-type Ticks = Record<string, TickState>; // itemId → state
+type GradeState = { grade: string | null; remark: string };
+type Grades = Record<string, GradeState>; // itemId → state
+
+const GRADE_OPTIONS = ["A", "B", "C", "D", "E", "F"] as const;
+
+const GRADE_COLORS: Record<string, string> = {
+  A: "text-emerald-700 bg-emerald-50",
+  B: "text-green-700 bg-green-50",
+  C: "text-blue-700 bg-blue-50",
+  D: "text-yellow-700 bg-yellow-50",
+  E: "text-orange-700 bg-orange-50",
+  F: "text-red-700 bg-red-50",
+};
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -51,37 +62,37 @@ export function TickForm({
 }: TickFormProps) {
   const router = useRouter();
   const [selectedStudentId, setSelectedStudentId] = useState<string>("");
-  const [ticks, setTicks] = useState<Ticks>({});
+  const [grades, setGrades] = useState<Grades>({});
   const [saving, setSaving] = useState(false);
 
-  // Re-initialise tick state whenever the selected student changes
+  // Re-initialise state whenever the selected student changes
   useEffect(() => {
     if (!selectedStudentId) {
-      setTicks({});
+      setGrades({});
       return;
     }
-    const newTicks: Ticks = {};
+    const newGrades: Grades = {};
     for (const a of existingAssessments) {
       if (a.studentId === selectedStudentId) {
-        newTicks[a.itemId] = { ticked: a.ticked, remark: a.remark ?? "" };
+        newGrades[a.itemId] = { grade: a.grade ?? null, remark: a.remark ?? "" };
       }
     }
-    setTicks(newTicks);
+    setGrades(newGrades);
   }, [selectedStudentId, existingAssessments]);
 
-  function getTick(itemId: string): TickState {
-    return ticks[itemId] ?? { ticked: false, remark: "" };
+  function getGrade(itemId: string): GradeState {
+    return grades[itemId] ?? { grade: null, remark: "" };
   }
 
-  function setTick(itemId: string, patch: Partial<TickState>) {
-    setTicks((prev) => ({
+  function setGrade(itemId: string, patch: Partial<GradeState>) {
+    setGrades((prev) => ({
       ...prev,
-      [itemId]: { ...getTick(itemId), ...patch },
+      [itemId]: { ...getGrade(itemId), ...patch },
     }));
   }
 
   const allItems = template.sections.flatMap((s) => s.items);
-  const tickedCount = allItems.filter((item) => getTick(item.id).ticked).length;
+  const gradedCount = allItems.filter((item) => getGrade(item.id).grade !== null).length;
 
   // ── Save ──────────────────────────────────────────────────────────────────────
 
@@ -93,11 +104,11 @@ export function TickForm({
 
     setSaving(true);
     const rows = allItems.map((item) => {
-      const tick = getTick(item.id);
+      const g = getGrade(item.id);
       return {
         itemId: item.id,
-        ticked: tick.ticked,
-        remark: tick.remark.trim() || undefined,
+        grade: g.grade,
+        remark: g.remark.trim() || undefined,
       };
     });
 
@@ -124,7 +135,7 @@ export function TickForm({
       {/* Header */}
       <div className="flex items-center gap-2 pb-1">
         <ClipboardCheck className="w-4 h-4 text-primary" />
-        <h2 className="font-semibold text-foreground text-sm">Tick Assessments</h2>
+        <h2 className="font-semibold text-foreground text-sm">Grade Assessments</h2>
       </div>
 
       {/* Controls row */}
@@ -138,7 +149,11 @@ export function TickForm({
               onValueChange={(v) => { if (v) setSelectedStudentId(v); }}
             >
               <SelectTrigger className="w-52">
-                <SelectValue placeholder="Select student…" />
+                <SelectValue placeholder="Select student...">
+                  {selectedStudentId
+                    ? students.find((s) => s.id === selectedStudentId)?.name ?? "Select student..."
+                    : "Select student..."}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {students.map((s) => (
@@ -160,7 +175,9 @@ export function TickForm({
               }}
             >
               <SelectTrigger className="w-40">
-                <SelectValue />
+                <SelectValue placeholder="Select term...">
+                  {`${activeTerm.name} ${activeTerm.year}`}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {terms.map((t) => (
@@ -178,7 +195,7 @@ export function TickForm({
         <div className="flex items-center gap-3">
           {selectedStudentId && (
             <span className="text-xs text-muted-foreground tabular-nums">
-              {tickedCount} / {allItems.length} ticked
+              {gradedCount} / {allItems.length} graded
             </span>
           )}
           <Button
@@ -225,44 +242,45 @@ export function TickForm({
                     </p>
                   ) : (
                     section.items.map((item) => {
-                      const tick = getTick(item.id);
+                      const g = getGrade(item.id);
                       return (
                         <div
                           key={item.id}
-                          className="flex items-start gap-3 px-4 py-3 hover:bg-muted/20 transition-colors"
+                          className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/20 transition-colors"
                         >
-                          {/* Checkbox */}
-                          <input
-                            type="checkbox"
-                            id={`tick-${item.id}`}
-                            checked={tick.ticked}
-                            onChange={(e) =>
-                              setTick(item.id, { ticked: e.target.checked })
-                            }
-                            className="mt-0.5 w-4 h-4 rounded border-border accent-primary cursor-pointer shrink-0"
-                          />
+                          {/* Item name */}
+                          <span className="flex-1 text-sm text-foreground min-w-0">
+                            {item.name}
+                          </span>
 
-                          {/* Label + optional remark */}
-                          <div className="flex-1 min-w-0">
-                            <label
-                              htmlFor={`tick-${item.id}`}
-                              className="text-sm text-foreground cursor-pointer select-none"
-                            >
-                              {item.name}
-                            </label>
-                            {/* Remark input — shown when item is ticked */}
-                            {tick.ticked && (
-                              <input
-                                type="text"
-                                placeholder="Add a remark… (optional)"
-                                value={tick.remark}
-                                onChange={(e) =>
-                                  setTick(item.id, { remark: e.target.value })
-                                }
-                                className="mt-1.5 w-full max-w-sm text-xs rounded border border-border bg-background px-2 py-1 text-muted-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/50 transition-colors"
-                              />
-                            )}
+                          {/* Grade buttons */}
+                          <div className="flex items-center gap-1 shrink-0">
+                            {GRADE_OPTIONS.map((opt) => (
+                              <button
+                                key={opt}
+                                type="button"
+                                onClick={() => setGrade(item.id, {
+                                  grade: g.grade === opt ? null : opt,
+                                })}
+                                className={`w-7 h-7 rounded text-xs font-bold border transition-all
+                                  ${g.grade === opt
+                                    ? `${GRADE_COLORS[opt]} border-current ring-1 ring-current/20`
+                                    : "text-muted-foreground border-border hover:border-foreground/30"
+                                  }`}
+                              >
+                                {opt}
+                              </button>
+                            ))}
                           </div>
+
+                          {/* Remark input */}
+                          <input
+                            type="text"
+                            placeholder="Remark..."
+                            value={g.remark}
+                            onChange={(e) => setGrade(item.id, { remark: e.target.value })}
+                            className="w-32 sm:w-40 text-xs rounded border border-border bg-background px-2 py-1 text-muted-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/50 transition-colors shrink-0"
+                          />
                         </div>
                       );
                     })

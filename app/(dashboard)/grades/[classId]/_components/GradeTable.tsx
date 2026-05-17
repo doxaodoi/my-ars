@@ -14,10 +14,7 @@ import type { Class, Student, Subject, Term, Grade } from "@prisma/client";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type ScoreKey =
-  | "midterm" | "exam"
-  | "test1" | "test2" | "midtermScore" | "assignment" | "project" | "basicExam";
-
+type ScoreKey = "classScore" | "examScore";
 type CellKey = `${string}_${string}_${ScoreKey}`;
 
 interface GradeTableProps {
@@ -33,17 +30,6 @@ interface GradeTableProps {
 
 function cellKey(studentId: string, subjectId: string, field: ScoreKey): CellKey {
   return `${studentId}_${subjectId}_${field}`;
-}
-
-function getMax(field: ScoreKey, classType: string): number {
-  if (classType === "KG") {
-    return field === "midterm" ? 30 : 70;
-  }
-  const map: Record<string, number> = {
-    test1: 10, test2: 10, midtermScore: 10,
-    assignment: 10, project: 20, basicExam: 100,
-  };
-  return map[field] ?? 100;
 }
 
 // ─── Score cell ───────────────────────────────────────────────────────────────
@@ -112,17 +98,8 @@ export function GradeTable({
   // Build initial cell values from existing grades
   const initialCells: Record<CellKey, string> = {};
   for (const g of existingGrades) {
-    if (isKG) {
-      initialCells[cellKey(g.studentId, g.subjectId, "midterm")] = g.midterm?.toString() ?? "";
-      initialCells[cellKey(g.studentId, g.subjectId, "exam")] = g.exam?.toString() ?? "";
-    } else {
-      initialCells[cellKey(g.studentId, g.subjectId, "test1")] = g.test1?.toString() ?? "";
-      initialCells[cellKey(g.studentId, g.subjectId, "test2")] = g.test2?.toString() ?? "";
-      initialCells[cellKey(g.studentId, g.subjectId, "midtermScore")] = g.midtermScore?.toString() ?? "";
-      initialCells[cellKey(g.studentId, g.subjectId, "assignment")] = g.assignment?.toString() ?? "";
-      initialCells[cellKey(g.studentId, g.subjectId, "project")] = g.project?.toString() ?? "";
-      initialCells[cellKey(g.studentId, g.subjectId, "basicExam")] = g.basicExam?.toString() ?? "";
-    }
+    initialCells[cellKey(g.studentId, g.subjectId, "classScore")] = g.classScore?.toString() ?? "";
+    initialCells[cellKey(g.studentId, g.subjectId, "examScore")] = g.examScore?.toString() ?? "";
   }
 
   const [cells, setCells] = useState<Record<CellKey, string>>(initialCells);
@@ -135,22 +112,17 @@ export function GradeTable({
 
   // Compute total for a student + subject pair
   function computeTotal(studentId: string, subjectId: string): number | null {
-    const g = (f: ScoreKey) => {
-      const v = cells[cellKey(studentId, subjectId, f)];
-      return v === "" || v === undefined ? null : parseFloat(v);
-    };
+    const cs = cells[cellKey(studentId, subjectId, "classScore")];
+    const es = cells[cellKey(studentId, subjectId, "examScore")];
+    const classScore = cs === "" || cs === undefined ? null : parseFloat(cs);
+    const examScore = es === "" || es === undefined ? null : parseFloat(es);
+
+    if (classScore === null && examScore === null) return null;
 
     if (isKG) {
-      const m = g("midterm"), e = g("exam");
-      if (m === null && e === null) return null;
-      return calcKGTotal(m ?? 0, e ?? 0);
+      return calcKGTotal(classScore ?? 0, examScore ?? 0);
     } else {
-      const vals = [g("test1"), g("test2"), g("midtermScore"), g("assignment"), g("project"), g("basicExam")];
-      if (vals.every((v) => v === null)) return null;
-      return calcBasicTotal(
-        vals[0] ?? 0, vals[1] ?? 0, vals[2] ?? 0,
-        vals[3] ?? 0, vals[4] ?? 0, vals[5] ?? 0,
-      );
+      return calcBasicTotal(classScore ?? 0, examScore ?? 0);
     }
   }
 
@@ -159,30 +131,14 @@ export function GradeTable({
 
     const rows = students.flatMap((student) =>
       subjects.map((subject) => {
-        const g = (f: ScoreKey) => {
-          const v = cells[cellKey(student.id, subject.id, f)];
-          return v === "" || v === undefined ? undefined : parseFloat(v);
+        const cs = cells[cellKey(student.id, subject.id, "classScore")];
+        const es = cells[cellKey(student.id, subject.id, "examScore")];
+        return {
+          studentId: student.id,
+          subjectId: subject.id,
+          classScore: cs === "" || cs === undefined ? undefined : parseFloat(cs),
+          examScore: es === "" || es === undefined ? undefined : parseFloat(es),
         };
-
-        if (isKG) {
-          return {
-            studentId: student.id,
-            subjectId: subject.id,
-            midterm: g("midterm"),
-            exam: g("exam"),
-          };
-        } else {
-          return {
-            studentId: student.id,
-            subjectId: subject.id,
-            test1: g("test1"),
-            test2: g("test2"),
-            midtermScore: g("midtermScore"),
-            assignment: g("assignment"),
-            project: g("project"),
-            basicExam: g("basicExam"),
-          };
-        }
       })
     );
 
@@ -197,21 +153,16 @@ export function GradeTable({
     router.refresh();
   }
 
-  // KG columns: Midterm /30 | Exam /70 | Total | Grade
-  // Basic columns: T1/10 | T2/10 | Mid/10 | Asgn/10 | Proj/20 | Exam/100 | Total | Grade
-  const kgCols: { key: ScoreKey; label: string; max: number }[] = [
-    { key: "midterm",     label: "Midterm\n/30",    max: 30 },
-    { key: "exam",        label: "Exam\n/70",       max: 70 },
-  ];
-  const basicCols: { key: ScoreKey; label: string; max: number }[] = [
-    { key: "test1",       label: "Test 1\n/10",     max: 10 },
-    { key: "test2",       label: "Test 2\n/10",     max: 10 },
-    { key: "midtermScore",label: "Midterm\n/10",    max: 10 },
-    { key: "assignment",  label: "Assign.\n/10",    max: 10 },
-    { key: "project",     label: "Project\n/20",    max: 20 },
-    { key: "basicExam",   label: "Exam\n/100",      max: 100 },
-  ];
-  const cols = isKG ? kgCols : basicCols;
+  // Column definitions
+  const cols: { key: ScoreKey; label: string; max: number }[] = isKG
+    ? [
+        { key: "classScore", label: "Class Score\n/30", max: 30 },
+        { key: "examScore",  label: "Exam\n/70",        max: 70 },
+      ]
+    : [
+        { key: "classScore", label: "Class Score\n/100", max: 100 },
+        { key: "examScore",  label: "Exam\n/100",        max: 100 },
+      ];
 
   if (students.length === 0) {
     return (
@@ -245,7 +196,12 @@ export function GradeTable({
             }}
           >
             <SelectTrigger className="w-40">
-              <SelectValue />
+              <SelectValue placeholder="Select term...">
+                {(() => {
+                  const t = terms.find((t) => t.id === activeTerm);
+                  return t ? `${t.name} ${t.year}` : "Select term...";
+                })()}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {terms.map((t) => (
@@ -264,6 +220,13 @@ export function GradeTable({
         </Button>
       </div>
 
+      {/* Scoring info */}
+      <p className="text-xs text-muted-foreground">
+        {isKG
+          ? "KG Scoring: Class Score (30%) + Exam (70%) = Total out of 100"
+          : "Basic Scoring: Class Score (50%) + Exam (50%) = Total out of 100"}
+      </p>
+
       {/* Grade tables — one per subject */}
       <div className="space-y-8">
         {subjects.map((subject) => (
@@ -277,7 +240,7 @@ export function GradeTable({
                     {cols.map((c) => (
                       <th
                         key={c.key}
-                        className="px-2 py-2 font-medium text-muted-foreground text-center whitespace-pre-line leading-tight min-w-16"
+                        className="px-2 py-2 font-medium text-muted-foreground text-center whitespace-pre-line leading-tight min-w-20"
                       >
                         {c.label}
                       </th>

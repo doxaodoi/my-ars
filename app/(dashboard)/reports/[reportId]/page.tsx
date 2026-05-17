@@ -63,14 +63,8 @@ export default async function ReportDetailPage({
   // ── Fetch grades (KG / Basic) ─────────────────────────────────────────────
   let grades: {
     subjectName: string;
-    midterm?: number | null;
-    exam?: number | null;
-    test1?: number | null;
-    test2?: number | null;
-    midtermScore?: number | null;
-    assignment?: number | null;
-    project?: number | null;
-    basicExam?: number | null;
+    classScore?: number | null;
+    examScore?: number | null;
     total?: number | null;
     grade?: string | null;
   }[] = [];
@@ -85,18 +79,17 @@ export default async function ReportDetailPage({
       .sort((a, b) => (orderMap.get(a.subjectId) ?? 99) - (orderMap.get(b.subjectId) ?? 99))
       .map((g) => ({
         subjectName: g.subject.name,
-        midterm: g.midterm, exam: g.exam,
-        test1: g.test1, test2: g.test2,
-        midtermScore: g.midtermScore, assignment: g.assignment,
-        project: g.project, basicExam: g.basicExam,
-        total: g.total, grade: g.grade,
+        classScore: g.classScore,
+        examScore: g.examScore,
+        total: g.total,
+        grade: g.grade,
       }));
   }
 
   // ── Fetch assessments (Nursery / Creche) ──────────────────────────────────
   let nurserySections: {
     name: string;
-    items: { name: string; ticked: boolean; remark?: string | null }[];
+    items: { name: string; grade: string | null; remark?: string | null }[];
   }[] = [];
 
   if (isNursery) {
@@ -124,7 +117,7 @@ export default async function ReportDetailPage({
         name: sec.name,
         items: sec.items.map((item) => {
           const a = item.assessments[0];
-          return { name: item.name, ticked: a?.ticked ?? false, remark: a?.remark };
+          return { name: item.name, grade: a?.grade ?? null, remark: a?.remark };
         }),
       }));
     }
@@ -171,65 +164,44 @@ export default async function ReportDetailPage({
               <thead>
                 <tr className="border-b bg-muted/40">
                   <th className="text-left px-3 py-2 font-medium text-muted-foreground">Subject</th>
-                  {isKG ? (
-                    <>
-                      <th className="px-2 py-2 font-medium text-muted-foreground text-center whitespace-pre-line leading-tight min-w-14">{"Midterm\n/30"}</th>
-                      <th className="px-2 py-2 font-medium text-muted-foreground text-center whitespace-pre-line leading-tight min-w-14">{"Exam\n/70"}</th>
-                    </>
-                  ) : (
-                    <>
-                      <th className="px-2 py-2 font-medium text-muted-foreground text-center whitespace-pre-line leading-tight min-w-12">{"T1\n/10"}</th>
-                      <th className="px-2 py-2 font-medium text-muted-foreground text-center whitespace-pre-line leading-tight min-w-12">{"T2\n/10"}</th>
-                      <th className="px-2 py-2 font-medium text-muted-foreground text-center whitespace-pre-line leading-tight min-w-12">{"Mid\n/10"}</th>
-                      <th className="px-2 py-2 font-medium text-muted-foreground text-center whitespace-pre-line leading-tight min-w-12">{"Asgn\n/10"}</th>
-                      <th className="px-2 py-2 font-medium text-muted-foreground text-center whitespace-pre-line leading-tight min-w-12">{"Proj\n/20"}</th>
-                      <th className="px-2 py-2 font-medium text-muted-foreground text-center whitespace-pre-line leading-tight min-w-16">{"Exam\n/100"}</th>
-                    </>
-                  )}
+                  <th className="px-2 py-2 font-medium text-muted-foreground text-center min-w-16">
+                    {isKG ? "Class\n/30" : "Class\n/100"}
+                  </th>
+                  <th className="px-2 py-2 font-medium text-muted-foreground text-center min-w-16">
+                    {isKG ? "Exam\n/70" : "Exam\n/100"}
+                  </th>
                   <th className="px-2 py-2 font-medium text-muted-foreground text-center w-14">Total</th>
                   <th className="px-2 py-2 font-medium text-muted-foreground text-center w-14">Grade</th>
                 </tr>
               </thead>
               <tbody>
-                {grades.map((g, i) => {
-                  return (
-                    <tr key={i} className={i % 2 === 0 ? "bg-background" : "bg-muted/20"}>
-                      <td className="px-3 py-2 font-medium">{g.subjectName}</td>
-                      {isKG ? (
-                        <>
-                          <td className="px-2 py-2 text-center">{g.midterm?.toFixed(1) ?? "—"}</td>
-                          <td className="px-2 py-2 text-center">{g.exam?.toFixed(1) ?? "—"}</td>
-                        </>
-                      ) : (
-                        <>
-                          <td className="px-2 py-2 text-center">{g.test1?.toFixed(1) ?? "—"}</td>
-                          <td className="px-2 py-2 text-center">{g.test2?.toFixed(1) ?? "—"}</td>
-                          <td className="px-2 py-2 text-center">{g.midtermScore?.toFixed(1) ?? "—"}</td>
-                          <td className="px-2 py-2 text-center">{g.assignment?.toFixed(1) ?? "—"}</td>
-                          <td className="px-2 py-2 text-center">{g.project?.toFixed(1) ?? "—"}</td>
-                          <td className="px-2 py-2 text-center">{g.basicExam?.toFixed(1) ?? "—"}</td>
-                        </>
-                      )}
-                      <td className="px-2 py-2 text-center font-semibold">
-                        {g.total?.toFixed(1) ?? "—"}
-                      </td>
-                      <td className="px-2 py-2 text-center">
-                        {g.grade ? (
-                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold ${GRADE_COLORS[g.grade] ?? "bg-muted text-muted-foreground"}`}>
-                            {g.grade}
-                          </span>
-                        ) : "—"}
-                      </td>
-                    </tr>
-                  );
-                })}
+                {grades.map((g, i) => (
+                  <tr key={i} className={i % 2 === 0 ? "bg-background" : "bg-muted/20"}>
+                    <td className="px-3 py-2 font-medium">{g.subjectName}</td>
+                    <td className="px-2 py-2 text-center">{g.classScore?.toFixed(1) ?? "—"}</td>
+                    <td className="px-2 py-2 text-center">{g.examScore?.toFixed(1) ?? "—"}</td>
+                    <td className="px-2 py-2 text-center font-semibold">
+                      {g.total?.toFixed(1) ?? "—"}
+                    </td>
+                    <td className="px-2 py-2 text-center">
+                      {g.grade ? (
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold ${GRADE_COLORS[g.grade] ?? "bg-muted text-muted-foreground"}`}>
+                          {g.grade}
+                        </span>
+                      ) : "—"}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
+          <p className="text-xs text-muted-foreground">
+            {isKG ? "Scoring: Class Score (30%) + Exam (70%)" : "Scoring: Class Score (50%) + Exam (50%)"}
+          </p>
         </div>
       )}
 
-      {/* ── Nursery / Creche tick assessments ────────────────────────────── */}
+      {/* ── Nursery / Creche assessments ───────────────────────────────────── */}
       {isNursery && nurserySections.length > 0 && (
         <div className="space-y-3">
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
@@ -243,10 +215,14 @@ export default async function ReportDetailPage({
               <div className="divide-y">
                 {sec.items.map((item, ii) => (
                   <div key={ii} className="flex items-center gap-3 px-4 py-2.5">
-                    <span className={`text-sm font-bold w-4 ${item.ticked ? "text-emerald-600" : "text-muted-foreground/40"}`}>
-                      {item.ticked ? "✓" : "○"}
-                    </span>
                     <span className="text-sm flex-1">{item.name}</span>
+                    <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${
+                      item.grade
+                        ? GRADE_COLORS[item.grade] ?? "bg-muted text-muted-foreground"
+                        : "text-muted-foreground"
+                    }`}>
+                      {item.grade ?? "—"}
+                    </span>
                     {item.remark && (
                       <span className="text-xs text-muted-foreground italic">{item.remark}</span>
                     )}
@@ -258,12 +234,18 @@ export default async function ReportDetailPage({
         </div>
       )}
 
-      {/* ── Interactive: remarks + actions ───────────────────────────────── */}
+      {/* ── Interactive: metadata + remarks + actions ───────────────────── */}
       <ReportDetail
         reportId={reportId}
         status={report.status}
         teacherRemark={report.teacherRemark}
         headRemark={report.headRemark}
+        interest={report.interest}
+        conduct={report.conduct}
+        attitude={report.attitude}
+        attendance={report.attendance}
+        totalDays={report.totalDays}
+        promoted={report.promoted}
         token={token}
         role={role}
         classId={cls.id}

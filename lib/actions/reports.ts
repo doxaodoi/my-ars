@@ -31,6 +31,39 @@ export async function generateClassReports(classId: string, termId: string) {
   }
 }
 
+// ── Report metadata (interest, conduct, attendance, etc.) ────────────────────
+
+export async function saveReportMeta(
+  reportId: string,
+  data: {
+    interest?: string;
+    conduct?: string;
+    attitude?: string;
+    attendance?: number | null;
+    totalDays?: number | null;
+    promoted?: string;
+  }
+) {
+  try {
+    await db.report.update({
+      where: { id: reportId },
+      data: {
+        interest: data.interest?.trim() || null,
+        conduct: data.conduct?.trim() || null,
+        attitude: data.attitude?.trim() || null,
+        attendance: data.attendance ?? null,
+        totalDays: data.totalDays ?? null,
+        promoted: data.promoted?.trim() || null,
+      },
+    });
+    revalidatePath(`/reports/${reportId}`);
+    return { success: true };
+  } catch (e) {
+    console.error(e);
+    return { error: "Failed to save report details." };
+  }
+}
+
 // ── Teacher remark ────────────────────────────────────────────────────────────
 
 export async function saveTeacherRemark(reportId: string, remark: string) {

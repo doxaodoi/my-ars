@@ -58,14 +58,8 @@ export async function GET(
       )
       .map((g) => ({
         name: g.subject.name,
-        midterm: g.midterm,
-        exam: g.exam,
-        test1: g.test1,
-        test2: g.test2,
-        midtermScore: g.midtermScore,
-        assignment: g.assignment,
-        project: g.project,
-        basicExam: g.basicExam,
+        classScore: g.classScore,
+        examScore: g.examScore,
         total: g.total,
         grade: g.grade,
         remark: g.remark,
@@ -99,7 +93,7 @@ export async function GET(
         name: sec.name,
         items: sec.items.map((item) => {
           const a = item.assessments[0];
-          return { name: item.name, ticked: a?.ticked ?? false, remark: a?.remark };
+          return { name: item.name, grade: a?.grade ?? null, remark: a?.remark };
         }),
       }));
     }
@@ -119,6 +113,15 @@ export async function GET(
     grades: !isNursery ? grades : undefined,
     nurserySections: isNursery ? nurserySections : undefined,
     logoUrl: appUrl ? `${appUrl}/logo.png` : undefined,
+    // New metadata fields
+    interest: report.interest,
+    conduct: report.conduct,
+    attitude: report.attitude,
+    attendance: report.attendance,
+    totalDays: report.totalDays,
+    promoted: report.promoted,
+    termEnds: report.term.termEnds?.toISOString().split("T")[0] ?? null,
+    nextTermBegins: report.term.nextTermBegins?.toISOString().split("T")[0] ?? null,
   };
 
   // ── Render PDF ────────────────────────────────────────────────────────────

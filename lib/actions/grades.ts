@@ -8,16 +8,8 @@ import { calcKGTotal, calcBasicTotal, getGradeLabel } from "@/lib/grading";
 type GradeRow = {
   studentId: string;
   subjectId: string;
-  // KG
-  midterm?: number;
-  exam?: number;
-  // Basic
-  test1?: number;
-  test2?: number;
-  midtermScore?: number;
-  assignment?: number;
-  project?: number;
-  basicExam?: number;
+  classScore?: number;
+  examScore?: number;
 };
 
 export async function saveGrades(
@@ -29,72 +21,42 @@ export async function saveGrades(
   try {
     await Promise.all(
       rows.map(async (row) => {
+        const classScore = row.classScore ?? 0;
+        const examScore = row.examScore ?? 0;
+
+        // Skip rows where both scores are 0 (no data entered)
+        const hasData = row.classScore !== undefined || row.examScore !== undefined;
+        if (!hasData) return;
+
         let total: number;
-
         if (classType === "KG") {
-          const midterm = row.midterm ?? 0;
-          const exam = row.exam ?? 0;
-          total = calcKGTotal(midterm, exam);
-
-          const { grade, remark } = getGradeLabel(total);
-
-          await db.grade.upsert({
-            where: {
-              studentId_subjectId_termId: {
-                studentId: row.studentId,
-                subjectId: row.subjectId,
-                termId,
-              },
-            },
-            update: { midterm, exam, total, grade, remark },
-            create: {
-              studentId: row.studentId,
-              subjectId: row.subjectId,
-              termId,
-              midterm,
-              exam,
-              total,
-              grade,
-              remark,
-            },
-          });
+          total = calcKGTotal(classScore, examScore);
         } else {
-          // Basic 1-6
-          const test1 = row.test1 ?? 0;
-          const test2 = row.test2 ?? 0;
-          const midtermScore = row.midtermScore ?? 0;
-          const assignment = row.assignment ?? 0;
-          const project = row.project ?? 0;
-          const basicExam = row.basicExam ?? 0;
-          total = calcBasicTotal(test1, test2, midtermScore, assignment, project, basicExam);
+          total = calcBasicTotal(classScore, examScore);
+        }
 
-          const { grade, remark } = getGradeLabel(total);
+        const { grade, remark } = getGradeLabel(total);
 
-          await db.grade.upsert({
-            where: {
-              studentId_subjectId_termId: {
-                studentId: row.studentId,
-                subjectId: row.subjectId,
-                termId,
-              },
-            },
-            update: { test1, test2, midtermScore, assignment, project, basicExam, total, grade, remark },
-            create: {
+        await db.grade.upsert({
+          where: {
+            studentId_subjectId_termId: {
               studentId: row.studentId,
               subjectId: row.subjectId,
               termId,
-              test1,
-              test2,
-              midtermScore,
-              assignment,
-              project,
-              basicExam,
-              total,
-              grade,
-              remark,
             },
-          });
-        }
+          },
+          update: { classScore, examScore, total, grade, remark },
+          create: {
+            studentId: row.studentId,
+            subjectId: row.subjectId,
+            termId,
+            classScore,
+            examScore,
+            total,
+            grade,
+            remark,
+          },
+        });
       })
     );
 

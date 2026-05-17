@@ -83,15 +83,15 @@ export async function deleteItem(id: string, classId: string) {
   }
 }
 
-// ── Assessments (tick/untick) ─────────────────────────────────────────────────
+// ── Assessments (letter grades A-F) ─────────────────────────────────────────
 
-type TickRow = { itemId: string; ticked: boolean; remark?: string };
+type GradeRow = { itemId: string; grade: string | null; remark?: string };
 
 export async function saveAssessments(
   studentId: string,
   termId: string,
   classId: string,
-  rows: TickRow[]
+  rows: GradeRow[]
 ) {
   try {
     await Promise.all(
@@ -104,12 +104,12 @@ export async function saveAssessments(
               termId,
             },
           },
-          update: { ticked: row.ticked, remark: row.remark ?? null },
+          update: { grade: row.grade, remark: row.remark ?? null },
           create: {
             studentId,
             itemId: row.itemId,
             termId,
-            ticked: row.ticked,
+            grade: row.grade,
             remark: row.remark ?? null,
           },
         })

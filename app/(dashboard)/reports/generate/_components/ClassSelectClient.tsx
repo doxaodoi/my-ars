@@ -30,7 +30,12 @@ export function ClassSelectClient({ classes, activeClassId, termId, typeLabels }
       }}
     >
       <SelectTrigger className="w-52">
-        <SelectValue placeholder="Select class…" />
+        <SelectValue placeholder="Select class...">
+          {(() => {
+            const cls = classes.find((c) => c.id === activeClassId);
+            return cls ? `${cls.name} — ${typeLabels[cls.type]} (${cls.count})` : "Select class...";
+          })()}
+        </SelectValue>
       </SelectTrigger>
       <SelectContent>
         {classes.map((c) => (

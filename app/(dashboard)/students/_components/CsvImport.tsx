@@ -26,21 +26,56 @@ interface ParsedRow {
   _error?: string;
 }
 
-function parseCSV(text: string, classNames: Set<string>): ParsedRow[] {
+// ─── CSV Helpers ─────────────────────────────────────────────────────────────
+
+/** Split a CSV line handling quoted fields (commas inside quotes) */
+function splitCSVLine(line: string): string[] {
+  const fields: string[] = [];
+  let current = "";
+  let inQuotes = false;
+  for (const char of line) {
+    if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === "," && !inQuotes) {
+      fields.push(current.trim());
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  fields.push(current.trim());
+  return fields;
+}
+
+/** Normalize a string for comparison: lowercase, collapse whitespace */
+function normalize(s: string): string {
+  return s.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function parseCSV(
+  text: string,
+  classes: Class[]
+): ParsedRow[] {
   const lines = text.trim().split(/\r?\n/);
   if (lines.length < 2) return [];
 
+  // Build class lookup maps
+  const classNameSet = new Set(classes.map((c) => normalize(c.name)));
+  // Also match without spaces: "Basic1" -> "Basic 1"
+  const classNoSpace = new Map(
+    classes.map((c) => [normalize(c.name).replace(/\s/g, ""), normalize(c.name)])
+  );
+
   // Normalize headers: lowercase, strip spaces/underscores
-  const headers = lines[0]
-    .split(",")
-    .map((h) => h.trim().toLowerCase().replace(/[\s_]/g, ""));
+  const headers = splitCSVLine(lines[0]).map((h) =>
+    h.toLowerCase().replace(/[\s_]/g, "")
+  );
 
   return lines
     .slice(1)
     .map((line) => {
       if (!line.trim()) return null;
-      // Simple parse — strip surrounding quotes from each field
-      const values = line.split(",").map((v) => v.trim().replace(/^"|"$/g, ""));
+      const values = splitCSVLine(line);
       const col = (key: string) => {
         const idx = headers.indexOf(key);
         return idx >= 0 ? values[idx]?.trim() || "" : "";
@@ -48,7 +83,7 @@ function parseCSV(text: string, classNames: Set<string>): ParsedRow[] {
 
       const name =
         col("name") || col("fullname") || col("studentname") || col("student");
-      const className =
+      const rawClassName =
         col("class") || col("classname");
       const admissionNo =
         col("admissionno") || col("admno") || col("admission") || undefined;
@@ -61,9 +96,27 @@ function parseCSV(text: string, classNames: Set<string>): ParsedRow[] {
       const parentPhone =
         col("parentphone") || col("phone") || col("tel") || undefined;
 
+      // Resolve class name with fuzzy matching
+      let resolvedClassName = rawClassName;
+      const norm = normalize(rawClassName);
+      if (!classNameSet.has(norm)) {
+        // Try without spaces
+        const noSpace = norm.replace(/\s/g, "");
+        const match = classNoSpace.get(noSpace);
+        if (match) {
+          // Find the original class name (preserving case)
+          const cls = classes.find((c) => normalize(c.name) === match);
+          resolvedClassName = cls?.name ?? rawClassName;
+        }
+      } else {
+        // Use the exact DB name for consistency
+        const cls = classes.find((c) => normalize(c.name) === norm);
+        resolvedClassName = cls?.name ?? rawClassName;
+      }
+
       const row: ParsedRow = {
         name,
-        className,
+        className: resolvedClassName,
         admissionNo: admissionNo || undefined,
         dateOfBirth: dateOfBirth || undefined,
         parentName: parentName || undefined,
@@ -72,9 +125,11 @@ function parseCSV(text: string, classNames: Set<string>): ParsedRow[] {
       };
 
       if (!name) row._error = "Name is required";
-      else if (!className) row._error = "Class is required";
-      else if (!classNames.has(className.toLowerCase().trim()))
-        row._error = `Class "${className}" not found`;
+      else if (!rawClassName) row._error = "Class is required";
+      else if (
+        !classNameSet.has(normalize(resolvedClassName))
+      )
+        row._error = `Class "${rawClassName}" not found`;
 
       return row;
     })
@@ -106,15 +161,13 @@ export function CsvImport({ classes }: CsvImportProps) {
   const [rows, setRows] = useState<ParsedRow[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const classNames = new Set(classes.map((c) => c.name.toLowerCase().trim()));
-
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
       const text = ev.target?.result as string;
-      setRows(parseCSV(text, classNames));
+      setRows(parseCSV(text, classes));
       setOpen(true);
     };
     reader.readAsText(file);
@@ -156,6 +209,10 @@ export function CsvImport({ classes }: CsvImportProps) {
         className="hidden"
         onChange={handleFile}
       />
+      <Button variant="ghost" size="sm" onClick={downloadTemplate} type="button">
+        <Download className="w-4 h-4 mr-1.5" />
+        Template
+      </Button>
       <Button variant="outline" onClick={() => fileRef.current?.click()}>
         <Upload className="w-4 h-4 mr-2" />
         Import CSV
@@ -177,10 +234,6 @@ export function CsvImport({ classes }: CsvImportProps) {
                 </span>
               )}
             </span>
-            <Button variant="ghost" size="sm" onClick={downloadTemplate} type="button">
-              <Download className="w-3.5 h-3.5 mr-1.5" />
-              Download template
-            </Button>
           </div>
 
           <div className="overflow-auto max-h-72 border rounded-md">

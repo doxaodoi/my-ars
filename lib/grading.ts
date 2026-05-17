@@ -8,21 +8,14 @@ export function getGradeLabel(total: number): { grade: string; remark: string } 
   return { grade: "F", remark: "Fail" };
 }
 
-/** KG1 & KG2: midterm /30, exam /70, total = midterm + exam */
-export function calcKGTotal(midterm: number, exam: number): number {
-  return Math.min(30, midterm) + Math.min(70, exam);
+/** KG1 & KG2: classScore /30, examScore /70, total = classScore + examScore */
+export function calcKGTotal(classScore: number, examScore: number): number {
+  return Math.min(30, Math.max(0, classScore)) + Math.min(70, Math.max(0, examScore));
 }
 
-/** Basic 1–6: CA = test1+test2+midterm+assignment+project (/60), exam /100
- *  Total = (CA/60)*50 + (exam/100)*50 */
-export function calcBasicTotal(
-  test1: number,
-  test2: number,
-  midterm: number,
-  assignment: number,
-  project: number,
-  exam: number
-): number {
-  const ca = test1 + test2 + midterm + assignment + project;
-  return (ca / 60) * 50 + (exam / 100) * 50;
+/** Basic 1-6: classScore /100 weighted 50% + examScore /100 weighted 50% */
+export function calcBasicTotal(classScore: number, examScore: number): number {
+  const cs = Math.min(100, Math.max(0, classScore));
+  const es = Math.min(100, Math.max(0, examScore));
+  return (cs / 100) * 50 + (es / 100) * 50;
 }

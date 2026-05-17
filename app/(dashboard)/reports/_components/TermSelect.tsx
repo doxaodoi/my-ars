@@ -19,6 +19,7 @@ interface Props {
 
 export function TermSelect({ terms, activeTermId, basePath }: Props) {
   const router = useRouter();
+  const activeTerm = terms.find((t) => t.id === activeTermId);
   return (
     <Select
       value={activeTermId}
@@ -29,7 +30,9 @@ export function TermSelect({ terms, activeTermId, basePath }: Props) {
       }}
     >
       <SelectTrigger className="w-44">
-        <SelectValue />
+        <SelectValue placeholder="Select term...">
+          {activeTerm ? `${activeTerm.name} ${activeTerm.year}` : "Select term..."}
+        </SelectValue>
       </SelectTrigger>
       <SelectContent>
         {terms.map((t) => (

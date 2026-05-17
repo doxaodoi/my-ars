@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import {
   saveTeacherRemark,
   saveHeadRemark,
+  saveReportMeta,
   submitReport,
   approveReport,
   rejectReport,
@@ -25,6 +26,12 @@ interface Props {
   status: string;
   teacherRemark: string | null;
   headRemark: string | null;
+  interest: string | null;
+  conduct: string | null;
+  attitude: string | null;
+  attendance: number | null;
+  totalDays: number | null;
+  promoted: string | null;
   token: string | null;
   role: string;
   classId: string;
@@ -40,6 +47,12 @@ export function ReportDetail({
   status,
   teacherRemark: initialTeacherRemark,
   headRemark: initialHeadRemark,
+  interest: initialInterest,
+  conduct: initialConduct,
+  attitude: initialAttitude,
+  attendance: initialAttendance,
+  totalDays: initialTotalDays,
+  promoted: initialPromoted,
   token: initialToken,
   role,
   parentEmail,
@@ -49,6 +62,12 @@ export function ReportDetail({
   const router = useRouter();
   const [teacherRemark, setTeacherRemark] = useState(initialTeacherRemark ?? "");
   const [headRemark, setHeadRemark]       = useState(initialHeadRemark ?? "");
+  const [interest, setInterest]           = useState(initialInterest ?? "");
+  const [conduct, setConduct]             = useState(initialConduct ?? "");
+  const [attitude, setAttitude]           = useState(initialAttitude ?? "");
+  const [attendance, setAttendance]       = useState(initialAttendance?.toString() ?? "");
+  const [totalDays, setTotalDays]         = useState(initialTotalDays?.toString() ?? "");
+  const [promoted, setPromoted]           = useState(initialPromoted ?? "");
   const [token, setToken]                 = useState(initialToken);
   const [loading, setLoading]             = useState<string | null>(null);
   const [copied, setCopied]               = useState(false);
@@ -56,10 +75,9 @@ export function ReportDetail({
   const isAdmin = role === "OWNER" || role === "ADMIN";
   const isHead  = role === "ACADEMIC_HEAD" || isAdmin;
 
-  // Can edit teacher remark: admin/owner (any status) or when DRAFT
+  // Can edit when DRAFT
+  const canEditMeta = isAdmin && status === "DRAFT";
   const canEditTeacher = isAdmin && status === "DRAFT";
-
-  // Can edit head remark: head/admin when SUBMITTED
   const canEditHead = isHead && (status === "SUBMITTED" || status === "APPROVED");
 
   // ── Helpers ───────────────────────────────────────────────────────────────
@@ -77,6 +95,20 @@ export function ReportDetail({
     } else {
       onSuccess(result);
     }
+  }
+
+  async function handleSaveMeta() {
+    await run("save-meta", () => saveReportMeta(reportId, {
+      interest,
+      conduct,
+      attitude,
+      attendance: attendance ? parseInt(attendance) : null,
+      totalDays: totalDays ? parseInt(totalDays) : null,
+      promoted,
+    }), () => {
+      toast.success("Report details saved");
+      router.refresh();
+    });
   }
 
   async function handleSaveTeacherRemark() {
@@ -155,6 +187,130 @@ export function ReportDetail({
 
   return (
     <div className="space-y-4">
+      {/* ── Report metadata (interest, conduct, attendance) ─────────────── */}
+      <div className="border rounded-lg overflow-hidden">
+        <div className="bg-muted/40 px-4 py-2.5 border-b">
+          <p className="text-sm font-semibold text-foreground">Report Details</p>
+        </div>
+        <div className="p-4 space-y-3">
+          {canEditMeta ? (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Interest</label>
+                  <input
+                    value={interest}
+                    onChange={(e) => setInterest(e.target.value)}
+                    placeholder="e.g. Football, Reading"
+                    className="mt-1 w-full text-sm rounded-md border border-border bg-background px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary/50"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Conduct</label>
+                  <select
+                    value={conduct}
+                    onChange={(e) => setConduct(e.target.value)}
+                    className="mt-1 w-full text-sm rounded-md border border-border bg-background px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary/50"
+                  >
+                    <option value="">Select...</option>
+                    <option value="Excellent">Excellent</option>
+                    <option value="Very Good">Very Good</option>
+                    <option value="Good">Good</option>
+                    <option value="Satisfactory">Satisfactory</option>
+                    <option value="Needs Improvement">Needs Improvement</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Attitude to Work</label>
+                  <select
+                    value={attitude}
+                    onChange={(e) => setAttitude(e.target.value)}
+                    className="mt-1 w-full text-sm rounded-md border border-border bg-background px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary/50"
+                  >
+                    <option value="">Select...</option>
+                    <option value="Excellent">Excellent</option>
+                    <option value="Very Good">Very Good</option>
+                    <option value="Good">Good</option>
+                    <option value="Satisfactory">Satisfactory</option>
+                    <option value="Needs Improvement">Needs Improvement</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Promoted To</label>
+                  <input
+                    value={promoted}
+                    onChange={(e) => setPromoted(e.target.value)}
+                    placeholder="e.g. Basic 3"
+                    className="mt-1 w-full text-sm rounded-md border border-border bg-background px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary/50"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Days Present</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={attendance}
+                    onChange={(e) => setAttendance(e.target.value)}
+                    placeholder="—"
+                    className="mt-1 w-full text-sm rounded-md border border-border bg-background px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary/50"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Total Days</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={totalDays}
+                    onChange={(e) => setTotalDays(e.target.value)}
+                    placeholder="—"
+                    className="mt-1 w-full text-sm rounded-md border border-border bg-background px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary/50"
+                  />
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs"
+                onClick={handleSaveMeta}
+                disabled={loading === "save-meta"}
+              >
+                {loading === "save-meta" ? (
+                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                ) : null}
+                Save Details
+              </Button>
+            </>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+              <div>
+                <span className="text-xs text-muted-foreground">Interest</span>
+                <p className="font-medium">{interest || "—"}</p>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground">Conduct</span>
+                <p className="font-medium">{conduct || "—"}</p>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground">Attitude</span>
+                <p className="font-medium">{attitude || "—"}</p>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground">Attendance</span>
+                <p className="font-medium">
+                  {attendance && totalDays ? `${attendance} / ${totalDays} days` : "—"}
+                </p>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground">Promoted To</span>
+                <p className="font-medium">{promoted || "—"}</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* ── Teacher remark ─────────────────────────────────────────────── */}
       <div className="border rounded-lg overflow-hidden">
         <div className="bg-muted/40 px-4 py-2.5 border-b">
@@ -166,7 +322,7 @@ export function ReportDetail({
               <textarea
                 value={teacherRemark}
                 onChange={(e) => setTeacherRemark(e.target.value)}
-                placeholder="Write a remark for this student…"
+                placeholder="Write a remark for this student..."
                 rows={3}
                 className="w-full text-sm rounded-md border border-border bg-background px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary/50 resize-none transition-colors"
               />
@@ -202,7 +358,7 @@ export function ReportDetail({
               <textarea
                 value={headRemark}
                 onChange={(e) => setHeadRemark(e.target.value)}
-                placeholder="Write a head teacher remark…"
+                placeholder="Write a head teacher remark..."
                 rows={3}
                 className="w-full text-sm rounded-md border border-border bg-background px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary/50 resize-none transition-colors"
               />

@@ -13,21 +13,59 @@ const TermSchema = z.object({
       const [a, b] = v.split("/").map(Number);
       return b === a + 1 && a >= 2020 && a <= 2100;
     }, "Second year must be one more than the first"),
+  termEnds: z.string().optional(),
+  nextTermBegins: z.string().optional(),
 });
 
 export async function createTerm(formData: FormData) {
   const parsed = TermSchema.safeParse({
     name: formData.get("name"),
     year: formData.get("year"),
+    termEnds: formData.get("termEnds") || undefined,
+    nextTermBegins: formData.get("nextTermBegins") || undefined,
   });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
   try {
-    await db.term.create({ data: { ...parsed.data, isCurrent: false } });
+    await db.term.create({
+      data: {
+        name: parsed.data.name,
+        year: parsed.data.year,
+        isCurrent: false,
+        termEnds: parsed.data.termEnds ? new Date(parsed.data.termEnds) : null,
+        nextTermBegins: parsed.data.nextTermBegins ? new Date(parsed.data.nextTermBegins) : null,
+      },
+    });
     revalidatePath("/admin");
     return { success: true };
   } catch {
     return { error: "Failed to create term." };
+  }
+}
+
+export async function updateTerm(id: string, formData: FormData) {
+  const parsed = TermSchema.safeParse({
+    name: formData.get("name"),
+    year: formData.get("year"),
+    termEnds: formData.get("termEnds") || undefined,
+    nextTermBegins: formData.get("nextTermBegins") || undefined,
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  try {
+    await db.term.update({
+      where: { id },
+      data: {
+        name: parsed.data.name,
+        year: parsed.data.year,
+        termEnds: parsed.data.termEnds ? new Date(parsed.data.termEnds) : null,
+        nextTermBegins: parsed.data.nextTermBegins ? new Date(parsed.data.nextTermBegins) : null,
+      },
+    });
+    revalidatePath("/admin");
+    return { success: true };
+  } catch {
+    return { error: "Failed to update term." };
   }
 }
 
