@@ -23,6 +23,10 @@ export function TermDialog() {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [termName, setTermName] = useState("Term 1");
+  const [startYear, setStartYear] = useState(String(currentYear));
+  const formattedYear = /^\d{4}$/.test(startYear)
+    ? `${startYear}/${Number(startYear) + 1}`
+    : "";
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -60,8 +64,23 @@ export function TermDialog() {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="year">Academic Year</Label>
-            <Input id="year" name="year" type="number" defaultValue={currentYear} required />
+            <Label>Academic Year</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                min={2020}
+                max={2100}
+                value={startYear}
+                onChange={(e) => setStartYear(e.target.value)}
+                className="w-24"
+                required
+              />
+              <span className="text-muted-foreground text-lg">/</span>
+              <span className="text-sm font-medium text-foreground">
+                {/^\d{4}$/.test(startYear) ? Number(startYear) + 1 : "----"}
+              </span>
+            </div>
+            <input type="hidden" name="year" value={formattedYear} />
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
             {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}

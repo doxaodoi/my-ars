@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
   await db.term.upsert({
     where: { id: "term-1-2025" },
     update: { isCurrent: true },
-    create: { id: "term-1-2025", name: "Term 1", year: 2025, isCurrent: true },
+    create: { id: "term-1-2025", name: "Term 1", year: "2025/2026", isCurrent: true },
   });
 
   // ── Seed classes ──────────────────────────────────────────────────────────
@@ -109,7 +109,7 @@ export async function GET(req: NextRequest) {
     created: {
       owner: owner.email,
       classes: classData.map((c) => c.name),
-      term: "Term 1 2025",
+      term: "Term 1 2025/2026",
     },
   });
 }

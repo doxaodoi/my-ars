@@ -9,7 +9,7 @@ import { sendReportEmail } from "@/lib/email";
 export async function generateClassReports(classId: string, termId: string) {
   try {
     const students = await db.student.findMany({
-      where: { classId },
+      where: { classId, graduated: false },
       select: { id: true },
     });
 
@@ -85,7 +85,7 @@ export async function submitReport(reportId: string) {
 export async function submitClassReports(classId: string, termId: string) {
   try {
     const students = await db.student.findMany({
-      where: { classId },
+      where: { classId, graduated: false },
       select: { id: true },
     });
 
@@ -185,7 +185,7 @@ export async function publishReport(reportId: string) {
 export async function publishClassReports(classId: string, termId: string) {
   try {
     const students = await db.student.findMany({
-      where: { classId },
+      where: { classId, graduated: false },
       select: { id: true },
     });
 

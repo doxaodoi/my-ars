@@ -77,6 +77,7 @@ model Student {
   parentEmail           String?
   parentPhone           String?
   photoUrl              String?
+  graduated             Boolean                   @default(false)
   class                 Class                     @relation(fields: [classId], references: [id])
   grades                Grade[]
   nurseryAssessments    NurseryStudentAssessment[]
@@ -97,7 +98,7 @@ model Subject {
 model Term {
   id        String   @id @default(cuid())
   name      String   // "Term 1", "Term 2", "Term 3"
-  year      Int      // academic year e.g. 2025
+  year      String   // academic year e.g. "2025/2026"
   isCurrent Boolean  @default(false)
   grades    Grade[]
   reports   Report[]

@@ -125,3 +125,49 @@ export async function importStudentsFromCSV(
   revalidatePath("/students");
   return { created, errors };
 }
+
+// ─── Promotion Actions ──────────────────────────────────────────────────────
+
+export async function getStudentsByClass(classId: string) {
+  return db.student.findMany({
+    where: { classId, graduated: false },
+    select: { id: true, name: true, admissionNo: true },
+    orderBy: { name: "asc" },
+  });
+}
+
+export async function promoteStudents(studentIds: string[], targetClassId: string) {
+  if (!studentIds.length) return { error: "No students selected." };
+  if (!targetClassId) return { error: "Target class is required." };
+
+  try {
+    const targetClass = await db.class.findUnique({ where: { id: targetClassId } });
+    if (!targetClass) return { error: "Target class not found." };
+
+    const { count } = await db.student.updateMany({
+      where: { id: { in: studentIds } },
+      data: { classId: targetClassId },
+    });
+    revalidatePath("/students");
+    revalidatePath("/admin");
+    return { success: true, count };
+  } catch {
+    return { error: "Failed to promote students." };
+  }
+}
+
+export async function graduateStudents(studentIds: string[]) {
+  if (!studentIds.length) return { error: "No students selected." };
+
+  try {
+    const { count } = await db.student.updateMany({
+      where: { id: { in: studentIds } },
+      data: { graduated: true },
+    });
+    revalidatePath("/students");
+    revalidatePath("/admin");
+    return { success: true, count };
+  } catch {
+    return { error: "Failed to graduate students." };
+  }
+}

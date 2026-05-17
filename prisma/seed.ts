@@ -65,11 +65,11 @@ async function main() {
   // Current term
   const term = await db.term.upsert({
     where: { id: "term-1-2025" },
-    update: { isCurrent: true },
+    update: { isCurrent: true, year: "2025/2026" },
     create: {
       id: "term-1-2025",
       name: "Term 1",
-      year: 2025,
+      year: "2025/2026",
       isCurrent: true,
     },
   });

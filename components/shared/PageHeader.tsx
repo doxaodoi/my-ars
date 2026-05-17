@@ -6,7 +6,7 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, description, action }: PageHeaderProps) {
   return (
-    <div className="flex items-start justify-between gap-4">
+    <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
       <div>
         <h1 className="text-2xl font-bold text-foreground">{title}</h1>
         {description && (

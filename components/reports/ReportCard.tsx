@@ -30,7 +30,7 @@ export type ReportCardData = {
   className: string;
   classType: "KG" | "PRIMARY" | "NURSERY" | "CRECHE";
   termName: string;
-  year: number;
+  year: string;
   teacherRemark?: string | null;
   headRemark?: string | null;
   grades?: SubjectGrade[];

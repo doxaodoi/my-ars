@@ -59,9 +59,15 @@ export default async function DashboardPage() {
           {greetingTime()}, {name} 👋
         </h1>
         <p className="text-muted-foreground text-sm mt-1">
+          {new Date().toLocaleDateString("en-GB", {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          })}
           {currentTerm
-            ? `Current term: ${currentTerm.name} ${currentTerm.year}`
-            : "No current term set — go to Administration to create one."}
+            ? ` · ${currentTerm.name} ${currentTerm.year}`
+            : " · No current term set — go to Administration to create one."}
         </p>
       </div>
 

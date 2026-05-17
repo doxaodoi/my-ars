@@ -53,7 +53,7 @@ export default async function GeneratePage({
   if (activeClass && activeTerm) {
     [students, reports] = await Promise.all([
       db.student.findMany({
-        where: { classId: activeClass.id },
+        where: { classId: activeClass.id, graduated: false },
         select: { id: true, name: true },
         orderBy: { name: "asc" },
       }),

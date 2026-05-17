@@ -6,7 +6,13 @@ import { z } from "zod";
 
 const TermSchema = z.object({
   name: z.string().min(1, "Term name is required"),
-  year: z.coerce.number().min(2020).max(2100),
+  year: z
+    .string()
+    .regex(/^\d{4}\/\d{4}$/, "Year must be in YYYY/YYYY format (e.g. 2025/2026)")
+    .refine((v) => {
+      const [a, b] = v.split("/").map(Number);
+      return b === a + 1 && a >= 2020 && a <= 2100;
+    }, "Second year must be one more than the first"),
 });
 
 export async function createTerm(formData: FormData) {

@@ -126,7 +126,8 @@ export async function GET(
   const buffer = await renderToBuffer(element);
 
   const safeName = report.student.name.replace(/\s+/g, "_");
-  const fileName = `Report_${safeName}_${report.term.name}_${report.term.year}.pdf`;
+  const safeYear = String(report.term.year).replace(/\//g, "-");
+  const fileName = `Report_${safeName}_${report.term.name}_${safeYear}.pdf`;
 
   return new NextResponse(new Uint8Array(buffer), {
     headers: {

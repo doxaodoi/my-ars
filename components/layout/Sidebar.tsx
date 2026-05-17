@@ -102,7 +102,7 @@ export function Sidebar({ role, userName }: SidebarProps) {
   const visibleNav = NAV.filter((item) => item.roles.includes(role));
 
   return (
-    <aside className="flex flex-col w-64 min-h-screen bg-sidebar border-r border-sidebar-border">
+    <aside className="flex flex-col w-64 h-full bg-sidebar border-r border-sidebar-border">
       {/* Logo / School branding */}
       <div className="relative overflow-hidden border-b border-sidebar-border">
         {/* Violet gradient header */}

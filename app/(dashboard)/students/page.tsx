@@ -20,6 +20,7 @@ export default async function StudentsPage({
   const [students, classes] = await Promise.all([
     db.student.findMany({
       where: {
+        graduated: false,
         ...(classId ? { classId } : {}),
         ...(q ? { name: { contains: q, mode: "insensitive" } } : {}),
       },
@@ -75,7 +76,7 @@ export default async function StudentsPage({
           description="Add your first student or adjust your filters"
         />
       ) : (
-        <div className="border rounded-lg overflow-hidden">
+        <div className="border rounded-lg overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

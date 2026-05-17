@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -8,6 +9,8 @@ import { TermDialog, SetCurrentTermButton } from "./_components/TermDialog";
 import { TeacherAssignment } from "./_components/TeacherAssignment";
 import { deleteUser } from "@/lib/actions/users";
 import { deleteTerm } from "@/lib/actions/terms";
+import { Button } from "@/components/ui/button";
+import { ArrowRight } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -138,6 +141,24 @@ export default async function AdminPage() {
           classes={classes}
           assignments={assignments}
         />
+      </section>
+
+      {/* ── Student Promotion ─────────────────────────────── */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold">Student Promotion</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Move students to their next class at the end of the academic year
+            </p>
+          </div>
+          <Link href="/admin/promote">
+            <Button size="sm">
+              <ArrowRight className="w-4 h-4 mr-1" />
+              Promote Students
+            </Button>
+          </Link>
+        </div>
       </section>
     </div>
   );
