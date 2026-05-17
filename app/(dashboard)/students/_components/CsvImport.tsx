@@ -52,6 +52,23 @@ function normalize(s: string): string {
   return s.toLowerCase().replace(/\s+/g, " ").trim();
 }
 
+/**
+ * Restore leading zero on phone numbers that Excel strips.
+ * Excel opens CSV and converts "0244123456" → 244123456 (9 digits).
+ * If we get a 9-digit number we pad it back to 10 digits with a leading 0.
+ */
+function normalizePhone(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return trimmed;
+  // Strip everything except digits
+  const digitsOnly = trimmed.replace(/\D/g, "");
+  // 9-digit number → was a 10-digit number with leading 0 stripped by Excel
+  if (digitsOnly.length === 9 && /^\d+$/.test(trimmed)) {
+    return "0" + digitsOnly;
+  }
+  return trimmed;
+}
+
 function parseCSV(
   text: string,
   classes: Class[]
@@ -93,8 +110,9 @@ function parseCSV(
         col("parentname") || col("parent") || col("guardian") || undefined;
       const parentEmail =
         col("parentemail") || col("email") || undefined;
-      const parentPhone =
-        col("parentphone") || col("phone") || col("tel") || undefined;
+      const parentPhone = normalizePhone(
+        col("parentphone") || col("phone") || col("tel") || ""
+      ) || undefined;
 
       // Resolve class name with fuzzy matching
       let resolvedClassName = rawClassName;
@@ -137,11 +155,14 @@ function parseCSV(
 }
 
 function downloadTemplate() {
+  // Phone numbers are quoted so Excel treats them as text (not numbers).
+  // The UTF-8 BOM (﻿) tells Excel this is a text file and preserves string values.
   const csv =
+    "﻿" +
     "name,class,admissionNo,dateOfBirth,parentName,parentEmail,parentPhone\n" +
-    "Kofi Mensah,Basic 1,ARS001,2015-03-15,Ama Mensah,ama@gmail.com,0244123456\n" +
-    "Abena Owusu,KG 2,,,,0277654321\n";
-  const blob = new Blob([csv], { type: "text/csv" });
+    'Kofi Mensah,Basic 1,ARS001,2015-03-15,Ama Mensah,ama@gmail.com,"0244123456"\n' +
+    'Abena Owusu,KG 2,,,,,"0277654321"\n';
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
