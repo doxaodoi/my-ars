@@ -165,10 +165,10 @@ export default async function ReportDetailPage({
                 <tr className="border-b bg-muted/40">
                   <th className="text-left px-3 py-2 font-medium text-muted-foreground">Subject</th>
                   <th className="px-2 py-2 font-medium text-muted-foreground text-center min-w-16">
-                    {isKG ? "Class\n/30" : "Class\n/100"}
+                    {isKG ? "Class\n/30" : "Class\n/50"}
                   </th>
                   <th className="px-2 py-2 font-medium text-muted-foreground text-center min-w-16">
-                    {isKG ? "Exam\n/70" : "Exam\n/100"}
+                    {isKG ? "Exam\n/70" : "Exam\n/50"}
                   </th>
                   <th className="px-2 py-2 font-medium text-muted-foreground text-center w-14">Total</th>
                   <th className="px-2 py-2 font-medium text-muted-foreground text-center w-14">Grade</th>

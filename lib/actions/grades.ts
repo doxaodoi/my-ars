@@ -3,13 +3,18 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { ClassType } from "@prisma/client";
-import { calcKGTotal, calcBasicTotal, getGradeLabel } from "@/lib/grading";
+import { calcBasicFromSubScores, calcKGFromSubScores, getGradeLabel } from "@/lib/grading";
 
 type GradeRow = {
   studentId: string;
   subjectId: string;
-  classScore?: number;
-  examScore?: number;
+  // Sub-scores entered by teacher
+  test1?: number;      // /10 (Basic only)
+  test2?: number;      // /10 (Basic only)
+  midTerm?: number;    // /10 (Basic) or /30 (KG)
+  assignment?: number; // /10 (Basic only)
+  project?: number;    // /20 (Basic only)
+  examRaw?: number;    // /100 (both)
 };
 
 export async function saveGrades(
@@ -21,42 +26,68 @@ export async function saveGrades(
   try {
     await Promise.all(
       rows.map(async (row) => {
-        const classScore = row.classScore ?? 0;
-        const examScore = row.examScore ?? 0;
-
-        // Skip rows where both scores are 0 (no data entered)
-        const hasData = row.classScore !== undefined || row.examScore !== undefined;
+        // Skip rows with no data entered
+        const hasData = classType === "KG"
+          ? (row.midTerm !== undefined || row.examRaw !== undefined)
+          : (row.test1 !== undefined || row.test2 !== undefined ||
+             row.midTerm !== undefined || row.assignment !== undefined ||
+             row.project !== undefined || row.examRaw !== undefined);
         if (!hasData) return;
 
-        let total: number;
         if (classType === "KG") {
-          total = calcKGTotal(classScore, examScore);
-        } else {
-          total = calcBasicTotal(classScore, examScore);
-        }
+          const midTerm = row.midTerm ?? 0;
+          const examRaw = row.examRaw ?? 0;
+          const { classScore, examScore, total, grade, remark } =
+            calcKGFromSubScores({ midTerm, examRaw });
 
-        const { grade, remark } = getGradeLabel(total);
-
-        await db.grade.upsert({
-          where: {
-            studentId_subjectId_termId: {
+          await db.grade.upsert({
+            where: {
+              studentId_subjectId_termId: {
+                studentId: row.studentId,
+                subjectId: row.subjectId,
+                termId,
+              },
+            },
+            update: { midTerm, examRaw, classScore, examScore, total, grade, remark },
+            create: {
               studentId: row.studentId,
               subjectId: row.subjectId,
               termId,
+              midTerm, examRaw, classScore, examScore, total, grade, remark,
             },
-          },
-          update: { classScore, examScore, total, grade, remark },
-          create: {
-            studentId: row.studentId,
-            subjectId: row.subjectId,
-            termId,
-            classScore,
-            examScore,
-            total,
-            grade,
-            remark,
-          },
-        });
+          });
+        } else {
+          // Basic (PRIMARY)
+          const test1 = row.test1 ?? 0;
+          const test2 = row.test2 ?? 0;
+          const midTerm = row.midTerm ?? 0;
+          const assignment = row.assignment ?? 0;
+          const project = row.project ?? 0;
+          const examRaw = row.examRaw ?? 0;
+          const { classScore, examScore, total, grade, remark } =
+            calcBasicFromSubScores({ test1, test2, midTerm, assignment, project, examRaw });
+
+          await db.grade.upsert({
+            where: {
+              studentId_subjectId_termId: {
+                studentId: row.studentId,
+                subjectId: row.subjectId,
+                termId,
+              },
+            },
+            update: {
+              test1, test2, midTerm, assignment, project, examRaw,
+              classScore, examScore, total, grade, remark,
+            },
+            create: {
+              studentId: row.studentId,
+              subjectId: row.subjectId,
+              termId,
+              test1, test2, midTerm, assignment, project, examRaw,
+              classScore, examScore, total, grade, remark,
+            },
+          });
+        }
       })
     );
 

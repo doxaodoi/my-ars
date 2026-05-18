@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { parseDateFlexible } from "@/lib/date-utils";
 
 const StudentSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -31,7 +32,7 @@ export async function createStudent(formData: FormData) {
     await db.student.create({
       data: {
         ...rest,
-        dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
+        dateOfBirth: dateOfBirth ? parseDateFlexible(dateOfBirth) ?? undefined : undefined,
         parentEmail: parentEmail || undefined,
       },
     });
@@ -60,7 +61,7 @@ export async function updateStudent(id: string, formData: FormData) {
       where: { id },
       data: {
         ...rest,
-        dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
+        dateOfBirth: dateOfBirth ? parseDateFlexible(dateOfBirth) ?? null : null,
         parentEmail: parentEmail || null,
       },
     });
@@ -105,12 +106,13 @@ export async function importStudentsFromCSV(
       continue;
     }
     try {
+      const dob = row.dateOfBirth ? parseDateFlexible(row.dateOfBirth) : undefined;
       await db.student.create({
         data: {
           name: row.name.trim(),
           classId,
           admissionNo: row.admissionNo?.trim() || undefined,
-          dateOfBirth: row.dateOfBirth ? new Date(row.dateOfBirth) : undefined,
+          dateOfBirth: dob ?? undefined,
           parentName: row.parentName?.trim() || undefined,
           parentEmail: row.parentEmail?.trim() || undefined,
           parentPhone: row.parentPhone?.trim() || undefined,

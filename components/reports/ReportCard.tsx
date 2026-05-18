@@ -204,10 +204,10 @@ export function ReportCard({ data }: { data: ReportCardData }) {
                 <View style={s.tblHead}>
                   <Text style={[s.tblHCell, { flex: 3, textAlign: "left" }]}>Subject</Text>
                   <Text style={[s.tblHCell, { flex: 1.2 }]}>
-                    {isKG ? "Class Score\n/30" : "Class Score\n/100"}
+                    {isKG ? "Class Score\n/30" : "Class Score\n/50"}
                   </Text>
                   <Text style={[s.tblHCell, { flex: 1.2 }]}>
-                    {isKG ? "Exam\n/70" : "Exam\n/100"}
+                    {isKG ? "Exam\n/70" : "Exam\n/50"}
                   </Text>
                   <Text style={[s.tblHCell, { flex: 1 }]}>Total</Text>
                   <Text style={[s.tblHCell, { flex: 0.85 }]}>Grade</Text>

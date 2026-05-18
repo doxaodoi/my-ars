@@ -116,16 +116,22 @@ model Grade {
   subjectId String
   termId    String
 
-  // Universal scoring: Class Score + Exam Score
-  // KG: classScore out of 30, examScore out of 70 → total = classScore + examScore
-  // Basic: classScore out of 100, examScore out of 100 → total = (classScore*50 + examScore*50) / 100
-  classScore  Float?
-  examScore   Float?
+  // Sub-scores entered by teacher
+  test1       Float?    // /10 (Basic only)
+  test2       Float?    // /10 (Basic only)
+  midTerm     Float?    // /10 (Basic) or /30 (KG)
+  assignment  Float?    // /10 (Basic only)
+  project     Float?    // /20 (Basic only)
+  examRaw     Float?    // /100 (both Basic and KG)
 
-  // Computed on save
-  total   Float?
-  grade   String?
-  remark  String?
+  // Computed on save from sub-scores
+  // Basic: classScore = (CA total / 60) * 50, examScore = (examRaw / 100) * 50
+  // KG:    classScore = midTerm (already /30), examScore = (examRaw / 100) * 70
+  classScore  Float?    // /50 (Basic) or /30 (KG)
+  examScore   Float?    // /50 (Basic) or /70 (KG)
+  total       Float?    // classScore + examScore = /100
+  grade       String?
+  remark      String?
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
   subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)

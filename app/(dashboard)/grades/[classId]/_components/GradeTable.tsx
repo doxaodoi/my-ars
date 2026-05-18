@@ -9,12 +9,12 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { saveGrades } from "@/lib/actions/grades";
-import { calcKGTotal, calcBasicTotal, getGradeLabel } from "@/lib/grading";
+import { calcBasicFromSubScores, calcKGFromSubScores, getGradeLabel } from "@/lib/grading";
 import type { Class, Student, Subject, Term, Grade } from "@prisma/client";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type ScoreKey = "classScore" | "examScore";
+type ScoreKey = "test1" | "test2" | "midTerm" | "assignment" | "project" | "examRaw";
 type CellKey = `${string}_${string}_${ScoreKey}`;
 
 interface GradeTableProps {
@@ -25,6 +25,10 @@ interface GradeTableProps {
   terms: Term[];
   existingGrades: Grade[];
 }
+
+type ColDef =
+  | { type: "input"; key: ScoreKey; label: string; max: number }
+  | { type: "computed"; label: string; compute: (studentId: string, subjectId: string) => string };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -55,7 +59,7 @@ function ScoreCell({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder="—"
-      className={`w-full text-center text-sm rounded px-1 py-1 border bg-background
+      className={`w-full text-center text-xs rounded px-0.5 py-1 border bg-background
         focus:outline-none focus:ring-1 focus:ring-primary transition-colors
         ${invalid ? "border-destructive text-destructive" : "border-transparent hover:border-border"}`}
     />
@@ -76,7 +80,7 @@ const GRADE_COLORS: Record<string, string> = {
 
 function GradeBadge({ grade }: { grade: string }) {
   return (
-    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold ${GRADE_COLORS[grade] ?? "bg-muted text-muted-foreground"}`}>
+    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold ${GRADE_COLORS[grade] ?? "bg-muted text-muted-foreground"}`}>
       {grade}
     </span>
   );
@@ -98,8 +102,17 @@ export function GradeTable({
   // Build initial cell values from existing grades
   const initialCells: Record<CellKey, string> = {};
   for (const g of existingGrades) {
-    initialCells[cellKey(g.studentId, g.subjectId, "classScore")] = g.classScore?.toString() ?? "";
-    initialCells[cellKey(g.studentId, g.subjectId, "examScore")] = g.examScore?.toString() ?? "";
+    if (isKG) {
+      initialCells[cellKey(g.studentId, g.subjectId, "midTerm")] = g.midTerm?.toString() ?? "";
+      initialCells[cellKey(g.studentId, g.subjectId, "examRaw")] = g.examRaw?.toString() ?? "";
+    } else {
+      initialCells[cellKey(g.studentId, g.subjectId, "test1")] = g.test1?.toString() ?? "";
+      initialCells[cellKey(g.studentId, g.subjectId, "test2")] = g.test2?.toString() ?? "";
+      initialCells[cellKey(g.studentId, g.subjectId, "midTerm")] = g.midTerm?.toString() ?? "";
+      initialCells[cellKey(g.studentId, g.subjectId, "assignment")] = g.assignment?.toString() ?? "";
+      initialCells[cellKey(g.studentId, g.subjectId, "project")] = g.project?.toString() ?? "";
+      initialCells[cellKey(g.studentId, g.subjectId, "examRaw")] = g.examRaw?.toString() ?? "";
+    }
   }
 
   const [cells, setCells] = useState<Record<CellKey, string>>(initialCells);
@@ -110,20 +123,85 @@ export function GradeTable({
     setCells((prev) => ({ ...prev, [key]: value }));
   }, []);
 
-  // Compute total for a student + subject pair
-  function computeTotal(studentId: string, subjectId: string): number | null {
-    const cs = cells[cellKey(studentId, subjectId, "classScore")];
-    const es = cells[cellKey(studentId, subjectId, "examScore")];
-    const classScore = cs === "" || cs === undefined ? null : parseFloat(cs);
-    const examScore = es === "" || es === undefined ? null : parseFloat(es);
+  // Helper to read a cell as a number (or null)
+  const cellNum = useCallback((studentId: string, subjectId: string, key: ScoreKey): number | null => {
+    const v = cells[cellKey(studentId, subjectId, key)];
+    if (v === "" || v === undefined) return null;
+    const n = parseFloat(v);
+    return isNaN(n) ? null : n;
+  }, [cells]);
 
-    if (classScore === null && examScore === null) return null;
+  // Compute values for a student + subject pair
+  function computeBasic(studentId: string, subjectId: string) {
+    const t1 = cellNum(studentId, subjectId, "test1");
+    const t2 = cellNum(studentId, subjectId, "test2");
+    const mt = cellNum(studentId, subjectId, "midTerm");
+    const as = cellNum(studentId, subjectId, "assignment");
+    const pr = cellNum(studentId, subjectId, "project");
+    const ex = cellNum(studentId, subjectId, "examRaw");
+    const anyData = [t1, t2, mt, as, pr, ex].some((v) => v !== null);
+    if (!anyData) return null;
+    return calcBasicFromSubScores({
+      test1: t1 ?? 0, test2: t2 ?? 0, midTerm: mt ?? 0,
+      assignment: as ?? 0, project: pr ?? 0, examRaw: ex ?? 0,
+    });
+  }
 
-    if (isKG) {
-      return calcKGTotal(classScore ?? 0, examScore ?? 0);
-    } else {
-      return calcBasicTotal(classScore ?? 0, examScore ?? 0);
-    }
+  function computeKG(studentId: string, subjectId: string) {
+    const mt = cellNum(studentId, subjectId, "midTerm");
+    const ex = cellNum(studentId, subjectId, "examRaw");
+    const anyData = mt !== null || ex !== null;
+    if (!anyData) return null;
+    return calcKGFromSubScores({ midTerm: mt ?? 0, examRaw: ex ?? 0 });
+  }
+
+  // Column definitions
+  const cols: ColDef[] = isKG
+    ? [
+        { type: "input", key: "midTerm", label: "MT\n/30", max: 30 },
+        { type: "computed", label: "CS\n/30", compute: (sid, subId) => {
+          const r = computeKG(sid, subId);
+          return r ? r.classScore.toFixed(1) : "—";
+        }},
+        { type: "input", key: "examRaw", label: "Exam\n/100", max: 100 },
+        { type: "computed", label: "ES\n/70", compute: (sid, subId) => {
+          const r = computeKG(sid, subId);
+          return r ? r.examScore.toFixed(1) : "—";
+        }},
+        { type: "computed", label: "Total\n/100", compute: (sid, subId) => {
+          const r = computeKG(sid, subId);
+          return r ? r.total.toFixed(1) : "—";
+        }},
+      ]
+    : [
+        { type: "input", key: "test1",      label: "T1\n/10",   max: 10 },
+        { type: "input", key: "test2",      label: "T2\n/10",   max: 10 },
+        { type: "input", key: "midTerm",    label: "MT\n/10",   max: 10 },
+        { type: "input", key: "assignment", label: "Asgn\n/10", max: 10 },
+        { type: "input", key: "project",    label: "Proj\n/20", max: 20 },
+        { type: "computed", label: "CA\n/60", compute: (sid, subId) => {
+          const r = computeBasic(sid, subId);
+          return r ? r.caTotal.toFixed(1) : "—";
+        }},
+        { type: "computed", label: "CS\n/50", compute: (sid, subId) => {
+          const r = computeBasic(sid, subId);
+          return r ? r.classScore.toFixed(1) : "—";
+        }},
+        { type: "input", key: "examRaw", label: "Exam\n/100", max: 100 },
+        { type: "computed", label: "ES\n/50", compute: (sid, subId) => {
+          const r = computeBasic(sid, subId);
+          return r ? r.examScore.toFixed(1) : "—";
+        }},
+        { type: "computed", label: "Total\n/100", compute: (sid, subId) => {
+          const r = computeBasic(sid, subId);
+          return r ? r.total.toFixed(1) : "—";
+        }},
+      ];
+
+  // Grade column is always last (separate from cols for cleaner rendering)
+  function getGrade(studentId: string, subjectId: string): string | null {
+    const result = isKG ? computeKG(studentId, subjectId) : computeBasic(studentId, subjectId);
+    return result?.grade ?? null;
   }
 
   async function handleSave() {
@@ -131,14 +209,27 @@ export function GradeTable({
 
     const rows = students.flatMap((student) =>
       subjects.map((subject) => {
-        const cs = cells[cellKey(student.id, subject.id, "classScore")];
-        const es = cells[cellKey(student.id, subject.id, "examScore")];
-        return {
-          studentId: student.id,
-          subjectId: subject.id,
-          classScore: cs === "" || cs === undefined ? undefined : parseFloat(cs),
-          examScore: es === "" || es === undefined ? undefined : parseFloat(es),
-        };
+        if (isKG) {
+          const mt = cellNum(student.id, subject.id, "midTerm");
+          const ex = cellNum(student.id, subject.id, "examRaw");
+          return {
+            studentId: student.id,
+            subjectId: subject.id,
+            midTerm: mt ?? undefined,
+            examRaw: ex ?? undefined,
+          };
+        } else {
+          return {
+            studentId: student.id,
+            subjectId: subject.id,
+            test1: cellNum(student.id, subject.id, "test1") ?? undefined,
+            test2: cellNum(student.id, subject.id, "test2") ?? undefined,
+            midTerm: cellNum(student.id, subject.id, "midTerm") ?? undefined,
+            assignment: cellNum(student.id, subject.id, "assignment") ?? undefined,
+            project: cellNum(student.id, subject.id, "project") ?? undefined,
+            examRaw: cellNum(student.id, subject.id, "examRaw") ?? undefined,
+          };
+        }
       })
     );
 
@@ -152,17 +243,6 @@ export function GradeTable({
     toast.success("Grades saved successfully");
     router.refresh();
   }
-
-  // Column definitions
-  const cols: { key: ScoreKey; label: string; max: number }[] = isKG
-    ? [
-        { key: "classScore", label: "Class Score\n/30", max: 30 },
-        { key: "examScore",  label: "Exam\n/70",        max: 70 },
-      ]
-    : [
-        { key: "classScore", label: "Class Score\n/100", max: 100 },
-        { key: "examScore",  label: "Exam\n/100",        max: 100 },
-      ];
 
   if (students.length === 0) {
     return (
@@ -223,8 +303,8 @@ export function GradeTable({
       {/* Scoring info */}
       <p className="text-xs text-muted-foreground">
         {isKG
-          ? "KG Scoring: Class Score (30%) + Exam (70%) = Total out of 100"
-          : "Basic Scoring: Class Score (50%) + Exam (50%) = Total out of 100"}
+          ? "KG: Mid-Term /30 + Exam /100 scaled to 70% = Total /100"
+          : "Basic: T1/10 + T2/10 + MT/10 + Asgn/10 + Proj/20 = CA/60 → CS/50 · Exam/100 → ES/50 · Total/100"}
       </p>
 
       {/* Grade tables — one per subject */}
@@ -233,49 +313,54 @@ export function GradeTable({
           <div key={subject.id} className="space-y-2">
             <h3 className="text-sm font-semibold text-foreground">{subject.name}</h3>
             <div className="border rounded-lg overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b bg-muted/40">
-                    <th className="text-left px-3 py-2 font-medium text-muted-foreground w-48">Student</th>
-                    {cols.map((c) => (
+                    <th className="text-left px-2 py-2 font-medium text-muted-foreground w-36 sticky left-0 bg-muted/40 z-10">
+                      Student
+                    </th>
+                    {cols.map((c, i) => (
                       <th
-                        key={c.key}
-                        className="px-2 py-2 font-medium text-muted-foreground text-center whitespace-pre-line leading-tight min-w-20"
+                        key={i}
+                        className={`px-1 py-2 font-medium text-muted-foreground text-center whitespace-pre-line leading-tight min-w-12
+                          ${c.type === "computed" ? "bg-muted/60" : ""}`}
                       >
                         {c.label}
                       </th>
                     ))}
-                    <th className="px-2 py-2 font-medium text-muted-foreground text-center w-16">Total</th>
-                    <th className="px-2 py-2 font-medium text-muted-foreground text-center w-14">Grade</th>
+                    <th className="px-1 py-2 font-medium text-muted-foreground text-center w-12">Grade</th>
                   </tr>
                 </thead>
                 <tbody>
                   {students.map((student, idx) => {
-                    const total = computeTotal(student.id, subject.id);
-                    const gradeInfo = total !== null ? getGradeLabel(total) : null;
+                    const grade = getGrade(student.id, subject.id);
 
                     return (
                       <tr
                         key={student.id}
                         className={idx % 2 === 0 ? "bg-background" : "bg-muted/20"}
                       >
-                        <td className="px-3 py-1.5 font-medium text-foreground truncate max-w-48">
+                        <td className="px-2 py-1 font-medium text-foreground truncate max-w-36 sticky left-0 z-10"
+                            style={{ backgroundColor: "inherit" }}>
                           {student.name}
                         </td>
-                        {cols.map((c) => (
-                          <td key={c.key} className="px-1 py-1">
-                            <ScoreCell
-                              value={cells[cellKey(student.id, subject.id, c.key)] ?? ""}
-                              max={c.max}
-                              onChange={(v) => setCell(cellKey(student.id, subject.id, c.key), v)}
-                            />
+                        {cols.map((c, i) => (
+                          <td key={i} className={`px-0.5 py-0.5 ${c.type === "computed" ? "bg-muted/30" : ""}`}>
+                            {c.type === "input" ? (
+                              <ScoreCell
+                                value={cells[cellKey(student.id, subject.id, c.key)] ?? ""}
+                                max={c.max}
+                                onChange={(v) => setCell(cellKey(student.id, subject.id, c.key), v)}
+                              />
+                            ) : (
+                              <span className="block text-center text-xs font-medium text-muted-foreground">
+                                {c.compute(student.id, subject.id)}
+                              </span>
+                            )}
                           </td>
                         ))}
-                        <td className="px-2 py-1.5 text-center font-semibold">
-                          {total !== null ? total.toFixed(1) : "—"}
-                        </td>
-                        <td className="px-2 py-1.5 text-center">
-                          {gradeInfo ? <GradeBadge grade={gradeInfo.grade} /> : "—"}
+                        <td className="px-1 py-1 text-center">
+                          {grade ? <GradeBadge grade={grade} /> : "—"}
                         </td>
                       </tr>
                     );

@@ -8,14 +8,52 @@ export function getGradeLabel(total: number): { grade: string; remark: string } 
   return { grade: "F", remark: "Fail" };
 }
 
-/** KG1 & KG2: classScore /30, examScore /70, total = classScore + examScore */
-export function calcKGTotal(classScore: number, examScore: number): number {
-  return Math.min(30, Math.max(0, classScore)) + Math.min(70, Math.max(0, examScore));
+// ─── Basic 1-6 ──────────────────────────────────────────────────────────────
+
+/**
+ * Basic 1-6: compute from 5 CA sub-scores + raw exam mark.
+ *
+ * CA: Test1/10 + Test2/10 + MidTerm/10 + Assignment/10 + Project/20 = /60
+ * Class Score = (CA / 60) × 50
+ * Exam Score  = (examRaw / 100) × 50
+ * Total       = Class Score + Exam Score  (out of 100)
+ */
+export function calcBasicFromSubScores(scores: {
+  test1: number;
+  test2: number;
+  midTerm: number;
+  assignment: number;
+  project: number;
+  examRaw: number;
+}) {
+  const caTotal = Math.min(10, Math.max(0, scores.test1))
+                + Math.min(10, Math.max(0, scores.test2))
+                + Math.min(10, Math.max(0, scores.midTerm))
+                + Math.min(10, Math.max(0, scores.assignment))
+                + Math.min(20, Math.max(0, scores.project));
+  const classScore = (caTotal / 60) * 50;
+  const examScore = (Math.min(100, Math.max(0, scores.examRaw)) / 100) * 50;
+  const total = classScore + examScore;
+  const { grade, remark } = getGradeLabel(total);
+  return { caTotal, classScore, examScore, total, grade, remark };
 }
 
-/** Basic 1-6: classScore /100 weighted 50% + examScore /100 weighted 50% */
-export function calcBasicTotal(classScore: number, examScore: number): number {
-  const cs = Math.min(100, Math.max(0, classScore));
-  const es = Math.min(100, Math.max(0, examScore));
-  return (cs / 100) * 50 + (es / 100) * 50;
+// ─── KG 1-2 ─────────────────────────────────────────────────────────────────
+
+/**
+ * KG 1-2: compute from midterm /30 + raw exam /100.
+ *
+ * Class Score = midTerm (already out of 30)
+ * Exam Score  = (examRaw / 100) × 70
+ * Total       = Class Score + Exam Score  (out of 100)
+ */
+export function calcKGFromSubScores(scores: {
+  midTerm: number;
+  examRaw: number;
+}) {
+  const classScore = Math.min(30, Math.max(0, scores.midTerm));
+  const examScore = (Math.min(100, Math.max(0, scores.examRaw)) / 100) * 70;
+  const total = classScore + examScore;
+  const { grade, remark } = getGradeLabel(total);
+  return { classScore, examScore, total, grade, remark };
 }

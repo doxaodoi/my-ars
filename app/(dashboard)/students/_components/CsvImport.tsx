@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { importStudentsFromCSV } from "@/lib/actions/students";
+import { parseDateFlexible } from "@/lib/date-utils";
 import type { Class } from "@prisma/client";
 
 interface ParsedRow {
@@ -148,6 +149,8 @@ function parseCSV(
         !classNameSet.has(normalize(resolvedClassName))
       )
         row._error = `Class "${rawClassName}" not found`;
+      else if (dateOfBirth && !parseDateFlexible(dateOfBirth))
+        row._error = `Invalid date "${dateOfBirth}" — use DD/MM/YYYY`;
 
       return row;
     })
@@ -160,8 +163,8 @@ function downloadTemplate() {
   const csv =
     "﻿" +
     "name,class,admissionNo,dateOfBirth,parentName,parentEmail,parentPhone\n" +
-    'Kofi Mensah,Basic 1,ARS001,2015-03-15,Ama Mensah,ama@gmail.com,"0244123456"\n' +
-    'Abena Owusu,KG 2,,,,,"0277654321"\n';
+    'Kofi Mensah,Basic 1,ARS001,15/03/2015,Ama Mensah,ama@gmail.com,"0244123456"\n' +
+    'Abena Owusu,KG 2,,22/09/2018,,,"0277654321"\n';
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
