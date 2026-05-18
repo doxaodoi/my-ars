@@ -18,7 +18,22 @@ const UpdateUserSchema = UserSchema.omit({ password: true }).extend({
   password: z.string().min(6).optional().or(z.literal("")),
 });
 
+// ── Role guard shared by all admin-only actions ───────────────────────────────
+
+async function requireAdmin() {
+  const session = await auth();
+  if (!session?.user || !["OWNER", "ADMIN"].includes(session.user.role)) {
+    return { error: "Unauthorized" } as const;
+  }
+  return null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export async function createUser(formData: FormData) {
+  const guard = await requireAdmin();
+  if (guard) return guard;
+
   const parsed = UserSchema.safeParse({
     name: formData.get("name"),
     email: formData.get("email"),
@@ -38,6 +53,9 @@ export async function createUser(formData: FormData) {
 }
 
 export async function updateUser(id: string, formData: FormData) {
+  const guard = await requireAdmin();
+  if (guard) return guard;
+
   const parsed = UpdateUserSchema.safeParse({
     name: formData.get("name"),
     email: formData.get("email"),
@@ -60,6 +78,9 @@ export async function updateUser(id: string, formData: FormData) {
 }
 
 export async function deleteUser(id: string) {
+  const guard = await requireAdmin();
+  if (guard) return guard;
+
   try {
     await db.user.delete({ where: { id } });
     revalidatePath("/admin");
@@ -70,6 +91,9 @@ export async function deleteUser(id: string) {
 }
 
 export async function assignTeacherToClass(userId: string, classId: string, isClassTeacher: boolean) {
+  const guard = await requireAdmin();
+  if (guard) return guard;
+
   try {
     await db.classTeacher.upsert({
       where: { userId_classId: { userId, classId } },
@@ -84,6 +108,9 @@ export async function assignTeacherToClass(userId: string, classId: string, isCl
 }
 
 export async function removeTeacherFromClass(userId: string, classId: string) {
+  const guard = await requireAdmin();
+  if (guard) return guard;
+
   try {
     await db.classTeacher.delete({ where: { userId_classId: { userId, classId } } });
     revalidatePath("/admin");

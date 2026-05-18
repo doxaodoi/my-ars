@@ -103,8 +103,7 @@ export async function GET(req: NextRequest) {
     message: "Database initialised successfully.",
     login: {
       email: ownerEmail,
-      password: ownerPassword,
-      note: "Change this password immediately after first login via My Account → Change Password.",
+      note: "Password is set via OWNER_PASSWORD env var. Change it immediately after first login.",
     },
     created: {
       owner: owner.email,

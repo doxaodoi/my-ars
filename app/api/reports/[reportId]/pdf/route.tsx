@@ -38,6 +38,19 @@ export async function GET(
     return new NextResponse("Report not found", { status: 404 });
   }
 
+  // ── Ownership check (TEACHER can only download their own class's PDFs) ───
+  if (session.user.role === "TEACHER") {
+    const assigned = await db.classTeacher.findFirst({
+      where: {
+        userId: session.user.id,
+        class: { students: { some: { id: report.studentId } } },
+      },
+    });
+    if (!assigned) {
+      return new NextResponse("Forbidden", { status: 403 });
+    }
+  }
+
   const cls = report.student.class;
   const isNursery = cls.type === "NURSERY" || cls.type === "CRECHE";
 
